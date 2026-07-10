@@ -13,9 +13,22 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Added
 - Project documentation set: `11-day-roadmap.md`, `progress.md`, `backlog.md`, `decisions.md`, `known-issues.md`, `changelog.md`.
+- **Day 1 — Foundation (M0):**
+  - Database schema for the full salon domain: `settings`, `service_categories`, `services`, `staff`, `staff_services`, `staff_schedules`, `staff_time_off`, `clients`, `appointments`, `appointment_services`, `client_photos`, `reminder_logs` (foreign keys, unique constraints, indexes, and soft deletes per spec).
+  - `role` (`admin`/`staff`) and nullable `staff_id` foreign key added to `users`.
+  - Eloquent models for all domain tables with relationships, casts, and soft deletes; `User` gains `staff()` relation and `isAdmin()`/`isStaff()` helpers.
+  - Backed PHP enums: `UserRole`, `Currency`, `AppointmentStatus`, `AppointmentSource`, `ClientPhotoType`, `ReminderChannel`.
+  - Factories for every model, plus `UserFactory` `admin()`/`staff()` states, and an idempotent `DemoSeeder` (salon settings, admin user, categories/services, 2 staff with weekly schedules + time off, demo clients).
+  - Global RTL/Arabic document shell (`dir="rtl"` on root layouts, `APP_LOCALE=ar`).
+  - Foundation test suite (schema, relationships, constraints, factories, seeder, RTL render).
 
 ### Changed
-- Database standardized on **MySQL** for development, testing, and production (previously SQLite for dev/tests). See [ADR-0001](decisions.md).
+- Database standardized on **MySQL** for development, testing, and production (previously SQLite for dev/tests). See [ADR-0001](decisions.md). Dev DB `salon_booking`, test DB `salon_booking_test`.
+- Enabled `RefreshDatabase` globally for the Feature suite in `tests/Pest.php`.
+- `composer types:check` now runs PHPStan with `--memory-limit=1G`.
+
+### Fixed
+- Feature test baseline that previously failed with `no such table: users` (the `RefreshDatabase` trait was commented out).
 
 ---
 

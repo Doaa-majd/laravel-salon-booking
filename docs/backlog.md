@@ -26,14 +26,14 @@
 
 ---
 
-## M0 — Foundation `P0`
-- [ ] **M0-1** Migrations for all 12 domain tables (settings, service_categories, services, staff, staff_services, staff_schedules, staff_time_off, clients, client_photos, appointments, appointment_services, reminder_logs)
-- [ ] **M0-2** Add `role` enum + nullable `staff_id` FK to `users`
-- [ ] **M0-3** FKs, unique constraints, indexes per spec
-- [ ] **M0-4** Models + relationships + casts (JSON, enums) + soft-deletes
-- [ ] **M0-5** Factories for every model
-- [ ] **M0-6** `DemoSeeder` (salon, categories, services, 2 staff w/ schedules, clients)
-- [ ] **M0-7** Global RTL shell (`dir="rtl"`, `lang="ar"`)
+## M0 — Foundation `P0` — ✅ Done (Day 1, 2026-07-09)
+- [x] **M0-1** Migrations for all 12 domain tables (settings, service_categories, services, staff, staff_services, staff_schedules, staff_time_off, clients, client_photos, appointments, appointment_services, reminder_logs)
+- [x] **M0-2** Add `role` enum + nullable `staff_id` FK to `users`
+- [x] **M0-3** FKs, unique constraints, indexes per spec
+- [x] **M0-4** Models + relationships + casts (JSON, enums) + soft-deletes
+- [x] **M0-5** Factories for every model
+- [x] **M0-6** `DemoSeeder` (salon, categories, services, 2 staff w/ schedules, clients)
+- [x] **M0-7** Global RTL shell (`dir="rtl"`, `lang="ar"`)
 
 ## M1 — Settings `P0`
 - [ ] **M1-1** Admin route group + role gate + redirect-by-role

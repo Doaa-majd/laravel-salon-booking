@@ -14,7 +14,7 @@ _Last updated: 2026-07-09_
 
 | Day | Focus | Modules | Status | Notes |
 |----:|-------|---------|--------|-------|
-| 1 | Foundation: schema, models, seeders, RTL shell | M0, X | **Not Started** | — |
+| 1 | Foundation: schema, models, seeders, RTL shell | M0, X | **Done** | 58 tests green; DB moved to MySQL; `RefreshDatabase` enabled |
 | 2 | Admin shell, role-based auth, Settings | X, M1 | Not Started | — |
 | 3 | Service Catalog | M2 | Not Started | — |
 | 4 | Staff profiles + service linking | M3 | Not Started | — |
@@ -26,7 +26,7 @@ _Last updated: 2026-07-09_
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 0 / 11 days complete.
+**Progress:** 1 / 11 days complete.
 
 ---
 
@@ -34,19 +34,24 @@ _Last updated: 2026-07-09_
 
 Each day is checked off against its roadmap deliverables. Copy the block format when adding progress notes.
 
-### Day 1 — Foundation `Not Started`
+### Day 1 — Foundation `Done`
 - **Goal:** Full schema, models, relationships, factories, demo seeder; app boots in RTL with roles wired.
 - **Deliverables:** `migrate:fresh --seed` populates demo DB · models resolvable · RTL renders · auth untouched.
 - **Checklist:**
-  - [ ] Migrations for all 12 domain tables
-  - [ ] `role` + `staff_id` added to `users`
-  - [ ] FKs, unique constraints, indexes per spec
-  - [ ] Models + relationships + casts + soft-deletes
-  - [ ] Factories for every model
-  - [ ] `DemoSeeder`
-  - [ ] Global RTL (`dir="rtl"` / `lang="ar"`)
-  - [ ] Tests written & `composer test` green
-- **Session log:** _(none yet)_
+  - [x] Migrations for all 12 domain tables
+  - [x] `role` + `staff_id` added to `users`
+  - [x] FKs, unique constraints, indexes per spec
+  - [x] Models + relationships + casts + soft-deletes
+  - [x] Factories for every model
+  - [x] `DemoSeeder`
+  - [x] Global RTL (`dir="rtl"` / `lang="ar"`)
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-09` — Implemented full M0 foundation. 12 domain migrations + `users.role`/`staff_id` (FK-safe order), 11 models with relationship generics/casts/soft-deletes, 6 backed enums (`UserRole`, `Currency`, `AppointmentStatus`, `AppointmentSource`, `ClientPhotoType`, `ReminderChannel`), 11 factories + `UserFactory` states (`admin()`/`staff()`), idempotent `DemoSeeder`, and global RTL shell (`dir="rtl"` + `APP_LOCALE=ar`).
+  - **DB infra:** switched dev + test to MySQL 8 (per ADR-0001). Dev DB `salon_booking`, test DB `salon_booking_test` (utf8mb4). Updated `.env`/`.env.example`/`phpunit.xml`.
+  - **Test infra:** enabled `RefreshDatabase` in `tests/Pest.php` — this also fixed the pre-existing broken baseline (auth suite was erroring with `no such table: users`).
+  - **Tooling:** added `--memory-limit=1G` to `composer types:check` (PHPStan OOM'd at the env's 128M default).
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 58/58 (153 assertions)**. `migrate:fresh --seed` clean. Home route renders `200` with `dir="rtl"`/`lang="ar"` (regression test added).
 
 ### Day 2 — Admin shell, roles, Settings `Not Started`
 - **Goal:** Admins log in, route by role, edit all salon settings incl. per-day working hours.
