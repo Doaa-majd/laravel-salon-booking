@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0008 | Role-based admin gating and post-login redirect | Accepted | 2026-07-10 |
 | ADR-0007 | App-layer conflict detection with locked transaction | Accepted | 2026-07-09 |
 | ADR-0006 | Money stored as immutable price/duration snapshots | Accepted | 2026-07-09 |
 | ADR-0005 | Soft deletes for historical entities | Accepted | 2026-07-09 |
@@ -20,6 +21,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0008 — Role-based admin gating and post-login redirect
+**Status:** Accepted · **Date:** 2026-07-10
+**Context:** The admin area (`/admin/*`) must be reachable only by admins, and users should land on a role-appropriate page after login — all without modifying Fortify's core auth flow (ADR-0003).
+**Decision:** Guard `/admin/*` with an `admin` route middleware (`EnsureUserIsAdmin`, aborts 403 for non-admins) on top of `auth`. Route by role after login by binding a custom `Laravel\Fortify\Contracts\LoginResponse` that redirects admins to `admin.dashboard` and everyone else to `config('fortify.home')`. Modules read salon config through a `Setting::current()` singleton accessor (returns the first row, creating one with defaults if none exists — guards the zero/multiple-row cases).
+**Consequences:** Role routing is additive; the existing auth suite remains the regression guard and is unchanged. `/admin` currently redirects to `/admin/settings` until the Day 10 dashboard lands. The `admin` group intentionally omits `verified` so the seeded (unverified) admin demo account can reach settings.
 
 ## ADR-0007 — App-layer conflict detection with locked transaction
 **Status:** Accepted · **Date:** 2026-07-09

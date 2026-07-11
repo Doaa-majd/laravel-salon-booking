@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-09_
+_Last updated: 2026-07-10_
 
 ---
 
@@ -15,7 +15,7 @@ _Last updated: 2026-07-09_
 | Day | Focus | Modules | Status | Notes |
 |----:|-------|---------|--------|-------|
 | 1 | Foundation: schema, models, seeders, RTL shell | M0, X | **Done** | 58 tests green; DB moved to MySQL; `RefreshDatabase` enabled |
-| 2 | Admin shell, role-based auth, Settings | X, M1 | Not Started | — |
+| 2 | Admin shell, role-based auth, Settings | X, M1 | **Done** | 70 tests green; `/admin` gated + role redirect; Settings + working-hours editor |
 | 3 | Service Catalog | M2 | Not Started | — |
 | 4 | Staff profiles + service linking | M3 | Not Started | — |
 | 5 | Staff schedules & time-off | M3 | Not Started | — |
@@ -26,7 +26,7 @@ _Last updated: 2026-07-09_
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 1 / 11 days complete.
+**Progress:** 2 / 11 days complete.
 
 ---
 
@@ -53,10 +53,22 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Tooling:** added `--memory-limit=1G` to `composer types:check` (PHPStan OOM'd at the env's 128M default).
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 58/58 (153 assertions)**. `migrate:fresh --seed` clean. Home route renders `200` with `dir="rtl"`/`lang="ar"` (regression test added).
 
-### Day 2 — Admin shell, roles, Settings `Not Started`
+### Day 2 — Admin shell, roles, Settings `Done`
 - **Goal:** Admins log in, route by role, edit all salon settings incl. per-day working hours.
-- **Checklist:** _(expand at start of day from roadmap Day 2)_
-- **Session log:** _(none yet)_
+- **Deliverables:** admin logs in and lands by role; `/admin/*` gated to admins; salon settings + per-day working hours save and re-render; existing auth untouched.
+- **Checklist:**
+  - [x] `admin` route middleware (`EnsureUserIsAdmin`) + `/admin/*` group behind `auth`
+  - [x] Role-based post-login redirect via custom Fortify `LoginResponse` (admin → `admin.dashboard`, else → `fortify.home`)
+  - [x] Role-aware sidebar nav (Administration group visible to admins only)
+  - [x] `Settings` Livewire page (name, logo, primary color, currency, timezone, week_start, phone, whatsapp, address, reminder template)
+  - [x] 7-day working-hours editor persisted to `settings.working_hours` JSON via `UpdateSalonSettings` action
+  - [x] `Setting::current()` singleton accessor (guards zero/multiple rows)
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-10` — Implemented M1 (Settings) + X (admin gating/roles). New: `EnsureUserIsAdmin` middleware (`admin` alias), `routes/admin.php` (`/admin` → redirect to settings, `/admin/settings` Livewire page), `App\Http\Responses\LoginResponse` bound in `FortifyServiceProvider::register()` for role-based redirect (extends Fortify per ADR-0003/0008), `App\Livewire\Admin\Settings` + view, `App\Actions\Settings\UpdateSalonSettings`, `App\Concerns\SalonSettingsValidationRules`, and `Setting::current()`/`Setting::defaultWorkingHours()`. Sidebar gains a role-aware Administration group.
+  - **Gotchas handled:** avoided Livewire's reserved `hydrate*` hook name (renamed the working-hours mapper to `mapWorkingHours`); made `Setting::current()` robust to MySQL not rolling back auto-increment between transactional tests (returns lowest-id row / creates one, rather than keying on `id = 1`). Working-hours cross-field rule (close > open) enforced for open days.
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 70/70 (194 assertions)** (12 new: 10 settings/accessor + 2 role-redirect). Existing auth suite unchanged.
+  - **Note:** logo uploads store on the `public` disk — run `php artisan storage:link` once for uploaded logos to be web-visible (see [KI-7](known-issues.md)).
 
 ### Day 3 — Service Catalog `Not Started`
 - **Session log:** _(none yet)_
