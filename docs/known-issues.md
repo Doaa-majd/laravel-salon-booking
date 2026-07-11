@@ -7,7 +7,7 @@
 **Severity:** `S1` blocker · `S2` major · `S3` minor
 **Status:** `Open` · `Mitigating` · `Monitoring` · `Resolved` · `Won't Fix`
 
-_Last updated: 2026-07-09_
+_Last updated: 2026-07-10_
 
 ---
 
@@ -21,6 +21,7 @@ _Last updated: 2026-07-09_
 | KI-4 | Risk | S2 | Money-snapshot integrity vs live price edits | — | Open |
 | KI-5 | Risk | S3 | MySQL config consistency across environments | — | Open |
 | KI-6 | Debt | S3 | Roadmap risk-register line still references SQLite (line ~380) | — | Open |
+| KI-7 | Debt | S3 | `storage:link` required for uploaded salon logos to be web-visible | — | Open |
 
 ---
 
@@ -61,6 +62,12 @@ _Last updated: 2026-07-09_
 - **Impact:** Documentation inconsistency after the MySQL switch; no runtime effect.
 - **Mitigation:** Update the divergence risk line to the MySQL-consistency wording used elsewhere.
 - **Trigger to close:** Line edited to remove the SQLite reference.
+
+### KI-7 — `storage:link` required for uploaded logos `Debt` `S3` `Open`
+- **Where:** M1 Settings (Day 2) — `App\Livewire\Admin\Settings` logo upload; stored on the `public` disk under `logos/`.
+- **Impact:** Uploaded logos save correctly but are not reachable via a public URL until the storage symlink exists.
+- **Mitigation:** Run `php artisan storage:link` once per environment; the same disk convention is reused for client photos on Day 7.
+- **Trigger to close:** Symlink documented in setup and present in deploy steps.
 
 ---
 

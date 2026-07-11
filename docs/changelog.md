@@ -13,6 +13,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Added
 - Project documentation set: `11-day-roadmap.md`, `progress.md`, `backlog.md`, `decisions.md`, `known-issues.md`, `changelog.md`.
+- **Day 2 — Admin shell, roles, Settings (M1, X):**
+  - Admin-only area at `/admin/*` guarded by an `EnsureUserIsAdmin` route middleware (`admin` alias); `/admin` redirects to `/admin/settings` until the Day 10 dashboard.
+  - Role-based post-login redirect: a custom Fortify `LoginResponse` sends admins to the admin area and everyone else to the configured home (extends Fortify only — see [ADR-0008](decisions.md)).
+  - Role-aware sidebar: an **Administration** navigation group is shown to admins only.
+  - **Salon settings** page (Livewire, admin): salon name, logo upload, primary color, currency, timezone, week start, phone, WhatsApp number, address, reminder template.
+  - **Working-hours editor**: 7-day open/close/closed grid persisted to `settings.working_hours` JSON via an `UpdateSalonSettings` action, with validation (valid `H:i` times, closing after opening on open days).
+  - `Setting::current()` singleton accessor so later modules read salon config without ad-hoc queries.
+  - Tests for admin authorization (view/403/redirect), settings update, working-hours JSON round-trip, validation failures, logo upload, and role-based login redirects.
 - **Day 1 — Foundation (M0):**
   - Database schema for the full salon domain: `settings`, `service_categories`, `services`, `staff`, `staff_services`, `staff_schedules`, `staff_time_off`, `clients`, `appointments`, `appointment_services`, `client_photos`, `reminder_logs` (foreign keys, unique constraints, indexes, and soft deletes per spec).
   - `role` (`admin`/`staff`) and nullable `staff_id` foreign key added to `users`.
