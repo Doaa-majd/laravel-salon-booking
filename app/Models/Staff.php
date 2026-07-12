@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -79,6 +80,16 @@ class Staff extends Model
     }
 
     /**
+     * The user account linked to this staff member, if any.
+     *
+     * @return HasOne<User, $this>
+     */
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class);
+    }
+
+    /**
      * Scope to only active staff.
      *
      * @param  Builder<Staff>  $query
@@ -86,5 +97,24 @@ class Staff extends Model
     public function scopeActive(Builder $query): void
     {
         $query->where('is_active', true);
+    }
+
+    /**
+     * Scope to staff who provide every one of the given services.
+     *
+     * Used by the availability engine to filter candidate staff for a
+     * multi-service booking. Soft-deleted services are excluded via the
+     * relation's default scope.
+     *
+     * @param  Builder<Staff>  $query
+     * @param  array<int, int>  $serviceIds
+     */
+    public function scopeProvidesAllServices(Builder $query, array $serviceIds): void
+    {
+        foreach (array_unique($serviceIds) as $serviceId) {
+            $query->whereHas('services', function (Builder $services) use ($serviceId): void {
+                $services->whereKey($serviceId);
+            });
+        }
     }
 }

@@ -144,3 +144,9 @@ Do not:
 
 - Do not modify Fortify authentication flow unless the task specifically requires it.
 - Prefer extending through actions/events instead of editing vendor behavior.
+
+## Document update
+At the end of every completed roadmap day:
+- Update docs/progress.md
+- Update docs/changelog.md
+- Record important architectural decisions in docs/decisions.md when applicable.

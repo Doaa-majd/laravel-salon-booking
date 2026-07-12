@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0010 | "Provides all services" via per-service `whereHas` | Accepted | 2026-07-12 |
 | ADR-0009 | Server-driven category reordering (no Alpine) | Accepted | 2026-07-11 |
 | ADR-0008 | Role-based admin gating and post-login redirect | Accepted | 2026-07-10 |
 | ADR-0007 | App-layer conflict detection with locked transaction | Accepted | 2026-07-09 |
@@ -22,6 +23,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0010 — "Provides all services" via per-service `whereHas`
+**Status:** Accepted · **Date:** 2026-07-12
+**Context:** The availability engine (Day 6) must narrow candidate staff to those who provide *every* service in a multi-service booking. The roadmap flags this query as subtle; a naive `whereHas('services', in [ids])` matches staff providing *any* one of them, not all.
+**Decision:** Implement `Staff::scopeProvidesAllServices(array $serviceIds)` as one `whereHas('services')` constraint per distinct service id (each requiring that specific service on the pivot). All constraints must hold, so only fully-qualified staff match. Because the constraint runs through the `services()` relation, the `Service` soft-delete scope applies automatically — a staff member whose required service was soft-deleted no longer qualifies. Callers chain `->active()` to also require the staff be active.
+**Consequences:** Correctness is readable and covered by tests (fully-qualified vs partial, and soft-delete exclusion). It issues one correlated subquery per service; acceptable for the small service-per-booking counts expected here. An equivalent `GROUP BY … HAVING COUNT(DISTINCT service_id) = N` form was rejected as harder to compose with soft-delete scoping and other query constraints.
 
 ## ADR-0009 — Server-driven category reordering (no Alpine)
 **Status:** Accepted · **Date:** 2026-07-11
