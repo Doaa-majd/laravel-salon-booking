@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-11_
+_Last updated: 2026-07-12_
 
 ---
 
@@ -17,7 +17,7 @@ _Last updated: 2026-07-11_
 | 1 | Foundation: schema, models, seeders, RTL shell | M0, X | **Done** | 58 tests green; DB moved to MySQL; `RefreshDatabase` enabled |
 | 2 | Admin shell, role-based auth, Settings | X, M1 | **Done** | 70 tests green; `/admin` gated + role redirect; Settings + working-hours editor |
 | 3 | Service Catalog | M2 | **Done** | 94 tests green; categories + services CRUD, reorder, active filter |
-| 4 | Staff profiles + service linking | M3 | Not Started | — |
+| 4 | Staff profiles + service linking | M3 | **Done** | 108 tests green; staff CRUD + service linking; `providesAllServices` scope for availability |
 | 5 | Staff schedules & time-off | M3 | Not Started | — |
 | 6 | Availability Engine (the heart) | M4 | Not Started | — |
 | 7 | Clients + before/after photos | M5 | Not Started | — |
@@ -26,7 +26,7 @@ _Last updated: 2026-07-11_
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 3 / 11 days complete.
+**Progress:** 4 / 11 days complete.
 
 ---
 
@@ -85,8 +85,21 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - `2026-07-11` — Implemented M2 (Service Catalog). New Livewire pages `App\Livewire\Admin\ServiceCategories` and `App\Livewire\Admin\Services` (thin — orchestrate actions only), backed by Actions `SaveServiceCategory`, `SaveService`, `ReorderServiceCategories`, and validation traits `ServiceCategoryValidationRules` / `ServiceValidationRules`. Added `scopeActive`/`scopeOrdered` to `ServiceCategory`. Routes `admin.service-categories.index` + `admin.services.index`; sidebar Administration group gains Categories + Services items. Forms use Flux modals; category order via server-driven move up/down (no Alpine, per ADR-0009).
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 94/94 (251 assertions)** (24 new: 12 categories + 12 services). Existing auth/settings suites unchanged.
 
-### Day 4 — Staff profiles + service linking `Not Started`
-- **Session log:** _(none yet)_
+### Day 4 — Staff profiles + service linking `Done`
+- **Goal:** Admin manages staff and assigns which services each performs (`staff_services`), gating who can be booked for a given service.
+- **Deliverables:** admin manages staff and their service offerings; the "provides all selected services" query is available and tested.
+- **Checklist:**
+  - [x] `staff` CRUD (Livewire): name, phone, photo upload, bio, commission_percent, is_active
+  - [x] `staff_services` many-to-many management (attach/detach services per staff, synced on save)
+  - [x] Active/inactive status filter on the staff list
+  - [x] Optional `users` ↔ `staff` account link (`Staff::user()` hasOne; `User::staff()` already present)
+  - [x] `Staff::scopeProvidesAllServices([...])` — candidate filter for availability (soft-deleted services excluded)
+  - [x] Validation class (`StaffValidationRules`): name required, commission 0–100, image photo, services exist
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-12` — Implemented M3 part 1 (Staff profiles + service linking). New Livewire page `App\Livewire\Admin\Staff` (thin — orchestrates the action; model aliased as `StaffModel` to avoid the class-name clash), backed by `App\Actions\Staff\SaveStaff` (fills + `services()->sync()`) and validation trait `StaffValidationRules`. `Staff` model gains `user()` hasOne and a `providesAllServices` scope (per-service `whereHas`, so it respects the `Service` soft-delete scope — see [ADR-0010](decisions.md)). Route `admin.staff.index`; sidebar Administration group gains a **Staff** item. Photo uploads reuse the Day 2 `public` disk pattern.
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 108/108 (284 assertions)** (14 new: authz, CRUD, validation bounds, soft-delete, filter, `providesAllServices` incl. soft-delete exclusion, pivot cascade on force-delete, user link). Existing suites unchanged.
+  - **Note:** staff photos store on the `public` disk under `staff/` — same `storage:link` requirement as logos ([KI-7](known-issues.md)). A full staff-user account-creation UI is out of scope for Day 4; the link is exposed at the model level (`staff_id` FK + relations).
 
 ### Day 5 — Staff schedules & time-off `Not Started`
 - **Session log:** _(none yet)_

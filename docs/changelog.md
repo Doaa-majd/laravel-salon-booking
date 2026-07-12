@@ -13,6 +13,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Added
 - Project documentation set: `11-day-roadmap.md`, `progress.md`, `backlog.md`, `decisions.md`, `known-issues.md`, `changelog.md`.
+- **Day 4 — Staff (M3, part 1):**
+  - **Staff** admin page (Livewire): create/edit/soft-delete with name, phone, photo upload, bio, commission percentage, and active toggle. List shows service counts and an active/inactive status filter.
+  - **Service linking**: per-staff `staff_services` many-to-many managed from the staff form (checkbox group of active services), synced on save.
+  - `Staff::scopeProvidesAllServices([...])` — returns only staff who provide *every* listed service (candidate filter for the Day 6 availability engine); soft-deleted services are excluded via the relation scope.
+  - `Staff::user()` (hasOne) exposes the optional `users` ↔ `staff` account link at the model level.
+  - Business logic in an Action (`SaveStaff`); validation in a reusable trait (`StaffValidationRules`) enforcing required name, commission 0–100, image photo, and existing service ids.
+  - Sidebar Administration group gains a **Staff** link (`admin.staff.index`).
+  - Tests for admin authorization, staff CRUD, validation bounds (missing name, negative/over-100 commission), soft-delete, status filter, `providesAllServices` (incl. soft-delete exclusion), pivot cascade on service force-delete, and the user↔staff link.
 - **Day 3 — Service Catalog (M2):**
   - **Service categories** admin page (Livewire): create/edit/delete, active toggle, and reordering. Reordering is server-driven (move up/down) and persists `sort_order` — no Alpine/JS framework (see [ADR-0009](decisions.md)). Deleting a category keeps its services and leaves them uncategorised (`category_id` set to null).
   - **Services** admin page (Livewire): create/edit/soft-delete with category, name, duration, price, description, color picker, and active toggle. List is grouped by category with an active/inactive status filter.
