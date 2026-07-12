@@ -130,6 +130,17 @@ test('the inactive filter shows only inactive staff', function () {
         ->assertDontSee('Active member');
 });
 
+test('the staff avatar renders without leaking blade directives when a photo is set', function () {
+    $this->actingAs(User::factory()->admin()->create());
+
+    Staff::factory()->create(['name' => 'With Photo', 'photo' => 'staff/example.jpg']);
+
+    Livewire::test(StaffComponent::class)
+        ->assertSee('With Photo')
+        ->assertDontSee('@if')
+        ->assertDontSee('src="{{');
+});
+
 test('providesAllServices scope returns only fully-qualified staff', function () {
     $serviceA = Service::factory()->create();
     $serviceB = Service::factory()->create();

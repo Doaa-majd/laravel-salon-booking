@@ -43,7 +43,7 @@
                                 <flux:avatar
                                     size="xs"
                                     :name="$member->name"
-                                    @if ($member->photo) src="{{ Storage::disk('public')->url($member->photo) }}" @endif
+                                    :src="$member->photo ? Storage::disk('public')->url($member->photo) : null"
                                 />
                                 {{ $member->name }}
                             </div>
