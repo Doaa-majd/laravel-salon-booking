@@ -4,6 +4,7 @@ use App\Livewire\Admin\ServiceCategories;
 use App\Livewire\Admin\Services;
 use App\Livewire\Admin\Settings;
 use App\Livewire\Admin\Staff;
+use App\Livewire\Admin\StaffSchedule;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'admin'])
@@ -17,4 +18,5 @@ Route::middleware(['auth', 'admin'])
         Route::livewire('service-categories', ServiceCategories::class)->name('service-categories.index');
         Route::livewire('services', Services::class)->name('services.index');
         Route::livewire('staff', Staff::class)->name('staff.index');
+        Route::livewire('staff/{staff}/schedule', StaffSchedule::class)->name('staff.schedule');
     });

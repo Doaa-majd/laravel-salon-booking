@@ -13,6 +13,14 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Added
 - Project documentation set: `11-day-roadmap.md`, `progress.md`, `backlog.md`, `decisions.md`, `known-issues.md`, `changelog.md`.
+- **Day 5 — Staff schedules & time-off (M3, part 2):**
+  - **Staff schedule** page (Livewire) at `/admin/staff/{staff}/schedule`, reached via a **Schedule** action on each staff row.
+  - **Weekly working-hours editor**: a 7-day grid (per weekday start/end + day-off toggle) upserted on the unique `(staff_id, weekday)` key, so saving is idempotent and one row per weekday is guaranteed. Open days validate `H:i` times with the end strictly after the start; days off skip the check.
+  - **Time-off management**: add specific-date leaves (full-day when times are empty, partial-day when a window is given), list them, and remove them. Validation: date not in the past, both or neither time bound, end after start (see [ADR-0011](decisions.md)).
+  - Business logic in Actions (`SaveStaffSchedule` upserts the week inside a transaction; `AddStaffTimeOff` creates a leave); validation in a reusable trait (`StaffScheduleValidationRules`).
+  - `DemoSeeder` now also seeds a partial-day leave (alongside the existing weekly schedules + full-day leave) to exercise the Day 6 availability subtraction step.
+  - Schedules/time-off are stored as salon-local wall-clock times, finalizing all inputs to the availability engine ([ADR-0011](decisions.md)).
+  - Tests for admin authorization, schedule load/defaults, save + idempotent re-save, end-after-start (and day-off skip), full-day and partial-day time-off creation, past-date rejection, single-bound rejection, and staff-scoped removal.
 - **Day 4 — Staff (M3, part 1):**
   - **Staff** admin page (Livewire): create/edit/soft-delete with name, phone, photo upload, bio, commission percentage, and active toggle. List shows service counts and an active/inactive status filter.
   - **Service linking**: per-staff `staff_services` many-to-many managed from the staff form (checkbox group of active services), synced on save.
