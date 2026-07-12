@@ -13,6 +13,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Added
 - Project documentation set: `11-day-roadmap.md`, `progress.md`, `backlog.md`, `decisions.md`, `known-issues.md`, `changelog.md`.
+- **Day 6 — Availability Engine (M4):**
+  - `App\Services\AvailabilityService` — the booking engine's core. Given a set of services (summed to a total duration D), an optional specific staff member (or "any"), and a date, it returns the bookable start times with a suggested staff member for each, implementing the §4 algorithm: weekday → salon working hours → intersect each candidate staff's weekly schedule → subtract time-off → subtract non-cancelled appointments → step-generate candidates (default 15-min step) → drop anything within the lead-time buffer (default 60 min) → resolve "any staff" to the earliest-id free staff per time.
+  - `AvailabilityService::intervalsOverlap()` — the half-open overlap rule `A.start < B.end && B.start < A.end`; touching boundaries (`end == start`) do not conflict, so a slot ending exactly when another begins stays valid.
+  - **Internal read-only endpoint** `GET /api/available-slots?service_ids=&staff_id=&date=` (public — backs the Day 9 booking wizard) returning the slots as JSON; `service_ids` accepts a comma-separated list or an array.
+  - All interval math runs in the salon timezone; appointment datetimes (stored as naive salon-local wall clock) are matched by date and re-labelled into that timezone, avoiding the UTC/salon offset shift (see [ADR-0012](decisions.md)). The service performs no writes and holds no Livewire state.
+  - The deepest test suite so far (20 cases): closed weekday, staff day-off, full-day and partial time-off subtraction, appointment overlap with adjacent-slot validity, cancelled appointments ignored, multi-service duration summing, duration exceeding the window, "any-staff" resolution and busy fallback, buffer filtering, window/step edge boundaries, unqualified/inactive staff exclusion, empty service list, plus endpoint JSON + validation.
 - **Day 5 — Staff schedules & time-off (M3, part 2):**
   - **Staff schedule** page (Livewire) at `/admin/staff/{staff}/schedule`, reached via a **Schedule** action on each staff row.
   - **Weekly working-hours editor**: a 7-day grid (per weekday start/end + day-off toggle) upserted on the unique `(staff_id, weekday)` key, so saving is idempotent and one row per weekday is guaranteed. Open days validate `H:i` times with the end strictly after the start; days off skip the check.
