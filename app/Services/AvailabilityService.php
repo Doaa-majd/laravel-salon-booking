@@ -65,33 +65,23 @@ class AvailabilityService
      */
     public function availableSlots(array $serviceIds, ?int $staffId, string|Carbon $date): array
     {
-        $serviceIds = array_values(array_unique(array_map('intval', $serviceIds)));
-
+        $serviceIds = $this->normalizeServiceIds($serviceIds);
         if ($serviceIds === []) {
             return [];
         }
 
         $setting = Setting::current();
-        $timezone = $setting->timezone;
+        $day = $this->resolveDay($date, $setting->timezone);
 
-        $day = $this->resolveDay($date, $timezone);
-        $weekday = $day->dayOfWeek; // 0 = Sunday .. 6 = Saturday
-
-        // Salon closed that weekday → no slots.
-        $hours = $setting->working_hours[$weekday] ?? null;
-        if ($hours === null || $hours['closed']) {
+        // Salon closed (or unconfigured) that weekday → no slots.
+        $salonWindow = $this->salonWindow($setting, $day);
+        if ($salonWindow === null) {
             return [];
         }
-        $salonOpen = $this->timeOn($day, $hours['open']);
-        $salonClose = $this->timeOn($day, $hours['close']);
 
-        // Total duration D — every requested service must be active and exist.
-        $services = Service::query()->active()->whereKey($serviceIds)->get();
-        if ($services->count() !== count($serviceIds)) {
-            return [];
-        }
-        $duration = (int) $services->sum('duration_minutes');
-        if ($duration <= 0) {
+        // Total duration D — every requested service must exist and be active.
+        $duration = $this->totalDuration($serviceIds);
+        if ($duration === null) {
             return [];
         }
 
@@ -100,6 +90,70 @@ class AvailabilityService
             return [];
         }
 
+        return $this->generateSlots($candidates, $day, $salonWindow, $duration, $setting->timezone);
+    }
+
+    /**
+     * Normalize the requested service ids: cast to int, de-duplicate, reindex.
+     *
+     * @param  array<int, int>  $serviceIds
+     * @return array<int, int>
+     */
+    private function normalizeServiceIds(array $serviceIds): array
+    {
+        return array_values(array_unique(array_map('intval', $serviceIds)));
+    }
+
+    /**
+     * The salon's [open, close] window for the weekday of $day, or null when
+     * the salon has no hours configured for that weekday or is closed.
+     *
+     * @return array{0: Carbon, 1: Carbon}|null
+     */
+    private function salonWindow(Setting $setting, Carbon $day): ?array
+    {
+        // 0 = Sunday .. 6 = Saturday.
+        $hours = $setting->working_hours[$day->dayOfWeek] ?? null;
+
+        if ($hours === null || $hours['closed']) {
+            return null;
+        }
+
+        return [$this->timeOn($day, $hours['open']), $this->timeOn($day, $hours['close'])];
+    }
+
+    /**
+     * Total booking duration D (minutes) for the requested services, or null
+     * when any requested service is missing/inactive or the total is empty.
+     *
+     * @param  array<int, int>  $serviceIds
+     */
+    private function totalDuration(array $serviceIds): ?int
+    {
+        $services = Service::query()->active()->whereKey($serviceIds)->get();
+
+        if ($services->count() !== count($serviceIds)) {
+            return null;
+        }
+
+        $duration = (int) $services->sum('duration_minutes');
+
+        return $duration > 0 ? $duration : null;
+    }
+
+    /**
+     * Run each candidate staff member through the availability pipeline and
+     * merge their free start times into one sorted, de-duplicated list. For
+     * "any staff", the earliest-id free staff is suggested for each time.
+     *
+     * @param  Collection<int, Staff>  $candidates
+     * @param  array{0: Carbon, 1: Carbon}  $salonWindow
+     * @return array<int, array{time: string, datetime: string, staff_id: int, staff_name: string}>
+     */
+    private function generateSlots(Collection $candidates, Carbon $day, array $salonWindow, int $duration, string $timezone): array
+    {
+        [$salonOpen, $salonClose] = $salonWindow;
+        $weekday = $day->dayOfWeek;
         $earliest = Carbon::now($timezone)->addMinutes($this->bufferMinutes);
 
         /** @var array<string, array{time: string, datetime: string, staff_id: int, staff_name: string}> $slots */

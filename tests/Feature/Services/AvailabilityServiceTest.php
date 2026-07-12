@@ -283,6 +283,41 @@ test('a specific staff who does not provide the service yields no slots', functi
     expect(slotTimes([$service->id], $staff->id))->toBe([]);
 });
 
+test('a non-existent service id yields no slots', function () {
+    salon();
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    staffWith([$service->id]);
+
+    // The requested set includes an id that does not exist, so the duration
+    // cannot be resolved for every requested service.
+    expect(slotTimes([$service->id, 999999]))->toBe([]);
+});
+
+test('an inactive service yields no slots', function () {
+    salon();
+    $service = Service::factory()->create(['duration_minutes' => 60, 'is_active' => false]);
+    staffWith([$service->id]);
+
+    expect(slotTimes([$service->id]))->toBe([]);
+});
+
+test('the working window starts at the later of salon open and staff start', function () {
+    // Salon opens at 12:00 even though staff start at 10:00 → window begins 12:00.
+    $weekday = targetWeekday();
+    $hours = collect(range(0, 6))
+        ->mapWithKeys(fn (int $d) => [$d => ['open' => $d === $weekday ? '12:00' : '10:00', 'close' => '22:00', 'closed' => false]])
+        ->all();
+    salon($hours);
+
+    $service = Service::factory()->create(['duration_minutes' => 60]);
+    $staff = staffWith([$service->id], start: '10:00', end: '18:00');
+
+    $times = slotTimes([$service->id], $staff->id);
+
+    expect($times[0])->toBe('12:00');
+    expect($times)->not->toContain('11:45');
+});
+
 test('no slots when the service list is empty', function () {
     salon();
     $service = Service::factory()->create(['duration_minutes' => 60]);
