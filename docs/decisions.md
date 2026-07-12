@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0012 | Availability engine reasons in salon-local wall clock | Accepted | 2026-07-12 |
 | ADR-0011 | Schedules are salon-local wall-clock; time-off null times = full day | Accepted | 2026-07-12 |
 | ADR-0010 | "Provides all services" via per-service `whereHas` | Accepted | 2026-07-12 |
 | ADR-0009 | Server-driven category reordering (no Alpine) | Accepted | 2026-07-11 |
@@ -24,6 +25,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0012 — Availability engine reasons in salon-local wall clock
+**Status:** Accepted · **Date:** 2026-07-12
+**Context:** `AvailabilityService` (Day 6) intersects three inputs with different storage shapes: `settings.working_hours` and `staff_schedules` are naive `H:i` wall-clock (ADR-0011), while `appointments.{datetime_start,datetime_end}` are `datetime` columns. `config('app.timezone')` is `UTC`, but the salon runs in `settings.timezone` (e.g. `Asia/Riyadh`). Laravel's datetime casts **do not convert timezones on write** — a `Carbon` is formatted using its own timezone and stored verbatim — so an appointment booked for a salon-local time is persisted as those same wall-clock digits and reads back labelled `UTC`. Naively `setTimezone(salon)` on read shifted every appointment by the salon offset, corrupting overlap detection.
+**Decision:** The engine performs **all** interval math in the salon timezone. Salon hours and schedules are composed with the target date via `settings.timezone`. Appointments are matched with `whereDate('datetime_start', <salon date>)` (comparing the stored wall-clock date, not a UTC range) and each busy interval is rebuilt by re-parsing the appointment's raw `Y-m-d H:i:s` **as** salon-local — i.e. the stored digits are treated as the salon wall clock, never offset-shifted. "Now + buffer" uses `Carbon::now(settings.timezone)`. The half-open overlap rule `A.start < B.end && B.start < A.end` treats touching boundaries (`end == start`) as free. Day 8's `BookAppointment` must write appointment datetimes as salon-local wall clock to stay consistent.
+**Consequences:** Availability is correct regardless of the divergence between `app.timezone` (UTC) and the salon timezone, and is proven by boundary tests (adjacency, partial time-off edges, step/window edges, buffer). The convention couples the engine to "appointments stored as salon-local wall clock"; a future move to true UTC instants (or per-branch timezones, ADR-0002) would require revisiting both this service and the booking writer together. `whereDate` assumes appointments never cross midnight, which holds given salon working hours.
 
 ## ADR-0011 — Schedules are salon-local wall-clock; time-off null times = full day
 **Status:** Accepted · **Date:** 2026-07-12

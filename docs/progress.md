@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-12 (Day 5)_
+_Last updated: 2026-07-12 (Day 6)_
 
 ---
 
@@ -19,14 +19,14 @@ _Last updated: 2026-07-12 (Day 5)_
 | 3 | Service Catalog | M2 | **Done** | 94 tests green; categories + services CRUD, reorder, active filter |
 | 4 | Staff profiles + service linking | M3 | **Done** | 108 tests green; staff CRUD + service linking; `providesAllServices` scope for availability |
 | 5 | Staff schedules & time-off | M3 | **Done** | 124 tests green; weekly schedule editor + time-off; all availability inputs now exist |
-| 6 | Availability Engine (the heart) | M4 | Not Started | — |
+| 6 | Availability Engine (the heart) | M4 | **Done** | 144 tests green; `AvailabilityService` + `/api/available-slots`; exhaustive boundary suite |
 | 7 | Clients + before/after photos | M5 | Not Started | — |
 | 8 | Appointments core (booking action) | M6 | Not Started | — |
 | 9 | Public booking wizard + self-service | M7 | Not Started | — |
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 5 / 11 days complete.
+**Progress:** 6 / 11 days complete.
 
 ---
 
@@ -116,8 +116,21 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 124/124 (334 assertions)** (16 new: authz view/403/redirect, schedule load+defaults, save, idempotent re-save, end-after-start + day-off skip, full/partial time-off, past-date reject, single-bound reject, remove + staff-scoped remove). `migrate:fresh --seed` clean. Existing suites unchanged.
   - **Note:** all availability-engine inputs (salon hours, staff schedules, time-off, appointments) now exist — Day 6 can build `AvailabilityService`.
 
-### Day 6 — Availability Engine `Not Started`
-- **Session log:** _(none yet)_
+### Day 6 — Availability Engine `Done`
+- **Goal:** `AvailabilityService` implements §4 exactly and is proven by an exhaustive test suite; a debug/read endpoint returns real slots. No booking writes yet.
+- **Deliverables:** given seeded data, the service and endpoint return correct available slots for specific-staff and "any staff" cases.
+- **Checklist:**
+  - [x] `AvailabilityService` in `app/Services/`: services → total duration D, staff (or "any"), date → available start times + suggested staff
+  - [x] Full algorithm: weekday → salon hours → per-candidate schedule intersection → subtract time-off → subtract non-cancelled appointments → step-generate candidates → future+buffer filter → "any staff" resolution
+  - [x] Overlap helper `intervalsOverlap()` (`A.start < B.end && B.start < A.end`; touching boundaries free)
+  - [x] Internal read-only endpoint `GET /api/available-slots?service_ids=&staff_id=&date=` (public; backs Day 9 wizard)
+  - [x] Pure service — no Livewire, fully unit-testable
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-12` — Implemented M4 (Availability Engine). New `App\Services\AvailabilityService` (constructor-injectable `stepMinutes`/`bufferMinutes`, defaults 15/60) implementing the §4 algorithm end to end, plus a static `intervalsOverlap()` half-open overlap helper (reused by Day 8's locked re-check). New invokable `App\Http\Controllers\Api\AvailableSlotsController` at route `api.available-slots` (public, JSON; accepts comma-separated or array `service_ids`). Candidate staff come from `Staff::active()->providesAllServices()` (Day 4 scope), ordered by id so "any-staff" resolution is deterministic (earliest-id free staff wins per time).
+  - **Timezone handling (see [ADR-0012](decisions.md)):** all interval math runs in `settings.timezone`. Since `app.timezone` is UTC and Laravel does not convert datetimes on write, appointment datetimes are stored as naive salon-local wall clock; the engine matches them with `whereDate` and re-parses their raw `Y-m-d H:i:s` **as** salon-local rather than `setTimezone`-shifting them (the initial shift bug surfaced in the appointment-overlap and any-staff-fallback tests and was fixed here). Partial time-off is treated as an extra busy interval; full-day time-off (null times) skips the staff for that date.
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 144/144 (379 assertions)** (20 new: overlap helper, closed weekday, day-off, full/partial time-off, appointment overlap + adjacency, cancelled ignored, multi-service duration + over-window, any-staff resolution + busy fallback, buffer, window/step edges, unqualified/inactive staff, empty services, and 4 endpoint tests). Existing suites unchanged.
+  - **Note:** the engine is read-only — no booking writes yet. Day 8's `BookAppointment` will re-run this check inside a locked transaction and must write appointment datetimes as salon-local wall clock to stay consistent with ADR-0012.
 
 ### Day 7 — Clients + photos `Not Started`
 - **Session log:** _(none yet)_
