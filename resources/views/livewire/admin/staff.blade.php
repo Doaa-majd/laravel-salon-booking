@@ -60,6 +60,9 @@
                         </flux:table.cell>
                         <flux:table.cell align="end">
                             <div class="flex items-center justify-end gap-2">
+                                <flux:button size="sm" variant="ghost" icon="calendar-days" :href="route('admin.staff.schedule', $member)" wire:navigate>
+                                    {{ __('Schedule') }}
+                                </flux:button>
                                 <flux:button size="sm" variant="ghost" icon="pencil-square" wire:click="edit({{ $member->id }})">
                                     {{ __('Edit') }}
                                 </flux:button>

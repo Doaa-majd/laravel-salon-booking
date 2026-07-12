@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0011 | Schedules are salon-local wall-clock; time-off null times = full day | Accepted | 2026-07-12 |
 | ADR-0010 | "Provides all services" via per-service `whereHas` | Accepted | 2026-07-12 |
 | ADR-0009 | Server-driven category reordering (no Alpine) | Accepted | 2026-07-11 |
 | ADR-0008 | Role-based admin gating and post-login redirect | Accepted | 2026-07-10 |
@@ -23,6 +24,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0011 — Schedules are salon-local wall-clock; time-off null times = full day
+**Status:** Accepted · **Date:** 2026-07-12
+**Context:** Day 5 introduces `staff_schedules` (weekly hours) and `staff_time_off` (specific-date leaves) — the last inputs to the availability engine (Day 6). The roadmap flags timezone correctness as a top risk: schedules are wall-clock times while appointments are datetimes, and the partial-vs-full-day time-off representation must be unambiguous for the engine's subtraction step.
+**Decision:** Store `staff_schedules.{start_time,end_time}` and `staff_time_off.{start_time,end_time}` as **naive salon-local wall-clock `TIME` values**, interpreted against `settings.timezone`. No timezone math happens at the schedule layer; Day 6 composes these wall-clock windows with the target date in the salon timezone. For `staff_time_off`, **both times null = a full-day leave**; **both set = a partial-day window** to subtract. The form enforces this: either both bounds are provided (end after start) or neither. The weekly editor is a fixed 7-row grid (one row per weekday) upserted on the unique `(staff_id, weekday)` key, so overlapping/duplicate weekday rows are structurally impossible.
+**Consequences:** The engine can treat schedule/time-off windows as plain `H:i` ranges without per-row tz conversion, applying `settings.timezone` once when generating candidate datetimes. Half-open partial windows (both bounds required) keep the subtraction step unambiguous. DST edge cases are deferred to Day 6 and confined to candidate generation. A future multi-branch/multi-tz model would need per-schedule tz, which this single-tenant design intentionally omits (ADR-0002).
 
 ## ADR-0010 — "Provides all services" via per-service `whereHas`
 **Status:** Accepted · **Date:** 2026-07-12

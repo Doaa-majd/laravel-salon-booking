@@ -99,10 +99,18 @@ class DemoSeeder extends Seeder
         $this->seedWeeklySchedule($sara);
         $this->seedWeeklySchedule($lina);
 
+        // Full-day leave for Lina.
         StaffTimeOff::factory()->create([
             'staff_id' => $lina->id,
             'date' => now()->addWeek()->format('Y-m-d'),
             'reason' => 'إجازة',
+        ]);
+
+        // Partial-day leave for Sara (fuels the Day 6 availability subtraction step).
+        StaffTimeOff::factory()->partial('13:00', '15:00')->create([
+            'staff_id' => $sara->id,
+            'date' => now()->addDays(3)->format('Y-m-d'),
+            'reason' => 'موعد شخصي',
         ]);
     }
 

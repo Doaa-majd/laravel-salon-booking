@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-12_
+_Last updated: 2026-07-12 (Day 5)_
 
 ---
 
@@ -18,7 +18,7 @@ _Last updated: 2026-07-12_
 | 2 | Admin shell, role-based auth, Settings | X, M1 | **Done** | 70 tests green; `/admin` gated + role redirect; Settings + working-hours editor |
 | 3 | Service Catalog | M2 | **Done** | 94 tests green; categories + services CRUD, reorder, active filter |
 | 4 | Staff profiles + service linking | M3 | **Done** | 108 tests green; staff CRUD + service linking; `providesAllServices` scope for availability |
-| 5 | Staff schedules & time-off | M3 | Not Started | — |
+| 5 | Staff schedules & time-off | M3 | **Done** | 124 tests green; weekly schedule editor + time-off; all availability inputs now exist |
 | 6 | Availability Engine (the heart) | M4 | Not Started | — |
 | 7 | Clients + before/after photos | M5 | Not Started | — |
 | 8 | Appointments core (booking action) | M6 | Not Started | — |
@@ -26,7 +26,7 @@ _Last updated: 2026-07-12_
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 4 / 11 days complete.
+**Progress:** 5 / 11 days complete.
 
 ---
 
@@ -101,8 +101,20 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 108/108 (284 assertions)** (14 new: authz, CRUD, validation bounds, soft-delete, filter, `providesAllServices` incl. soft-delete exclusion, pivot cascade on force-delete, user link). Existing suites unchanged.
   - **Note:** staff photos store on the `public` disk under `staff/` — same `storage:link` requirement as logos ([KI-7](known-issues.md)). A full staff-user account-creation UI is out of scope for Day 4; the link is exposed at the model level (`staff_id` FK + relations).
 
-### Day 5 — Staff schedules & time-off `Not Started`
-- **Session log:** _(none yet)_
+### Day 5 — Staff schedules & time-off `Done`
+- **Goal:** Admin sets each staff member's weekly working hours and specific-date leaves. After today, **all inputs to the availability algorithm exist.**
+- **Deliverables:** admin defines weekly availability and leaves per staff; demo data supports realistic slot generation.
+- **Checklist:**
+  - [x] `staff_schedules` weekly editor: 7-day grid (per weekday start/end + `is_off`), unique per `(staff, weekday)` via upsert
+  - [x] `staff_time_off` management: date, optional start/end (empty = full day), reason; list/add/remove
+  - [x] Validation: open-day end > start; time-off both-or-neither time bounds + end > start; date not in the past
+  - [x] Weekday grid structurally prevents overlapping/duplicate schedule rows
+  - [x] Seeder extended with a sample partial-day time-off (weekly schedules + full-day leave already seeded)
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-12` — Implemented M3 part 2 (schedules & time-off). New Livewire page `App\Livewire\Admin\StaffSchedule` (thin — orchestrates actions; `Staff` aliased as `StaffModel`) at route `admin.staff.schedule` (`/admin/staff/{staff}/schedule`), reached via a **Schedule** button on the staff index. Backed by Actions `SaveStaffSchedule` (transactional `updateOrCreate` per weekday on the unique key) and `AddStaffTimeOff`, with validation trait `StaffScheduleValidationRules` (closure rules for end-after-start on both forms, `required_with` for partial-day bounds, `after_or_equal:today` for the leave date). `DemoSeeder` gains a partial-day leave. Established the schedule timezone convention — salon-local wall-clock times; null time-off times = full day (see [ADR-0011](decisions.md)).
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 124/124 (334 assertions)** (16 new: authz view/403/redirect, schedule load+defaults, save, idempotent re-save, end-after-start + day-off skip, full/partial time-off, past-date reject, single-bound reject, remove + staff-scoped remove). `migrate:fresh --seed` clean. Existing suites unchanged.
+  - **Note:** all availability-engine inputs (salon hours, staff schedules, time-off, appointments) now exist — Day 6 can build `AvailabilityService`.
 
 ### Day 6 — Availability Engine `Not Started`
 - **Session log:** _(none yet)_
