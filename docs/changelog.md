@@ -13,6 +13,12 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Added
 - Project documentation set: `11-day-roadmap.md`, `progress.md`, `backlog.md`, `decisions.md`, `known-issues.md`, `changelog.md`.
+- **Day 3 — Service Catalog (M2):**
+  - **Service categories** admin page (Livewire): create/edit/delete, active toggle, and reordering. Reordering is server-driven (move up/down) and persists `sort_order` — no Alpine/JS framework (see [ADR-0009](decisions.md)). Deleting a category keeps its services and leaves them uncategorised (`category_id` set to null).
+  - **Services** admin page (Livewire): create/edit/soft-delete with category, name, duration, price, description, color picker, and active toggle. List is grouped by category with an active/inactive status filter.
+  - Business logic lives in Actions (`SaveServiceCategory`, `SaveService`, `ReorderServiceCategories`); validation in reusable traits (`ServiceCategoryValidationRules`, `ServiceValidationRules`) enforcing duration ≥ 1, price ≥ 0, and hex colors.
+  - `ServiceCategory` gains `active` and `ordered` query scopes; sidebar Administration group gains **Categories** and **Services** links.
+  - Tests for admin authorization, category/service CRUD, validation failures (missing name, non-positive duration, negative price, bad hex), reorder persistence, category-delete null-out, soft-delete, and active scope/filter.
 - **Day 2 — Admin shell, roles, Settings (M1, X):**
   - Admin-only area at `/admin/*` guarded by an `EnsureUserIsAdmin` route middleware (`admin` alias); `/admin` redirects to `/admin/settings` until the Day 10 dashboard.
   - Role-based post-login redirect: a custom Fortify `LoginResponse` sends admins to the admin area and everyone else to the configured home (extends Fortify only — see [ADR-0008](decisions.md)).

@@ -19,6 +19,12 @@
 
                 @if (auth()->user()?->isAdmin())
                     <flux:sidebar.group :heading="__('Administration')" class="grid">
+                        <flux:sidebar.item icon="rectangle-stack" :href="route('admin.service-categories.index')" :current="request()->routeIs('admin.service-categories.*')" wire:navigate>
+                            {{ __('Categories') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="sparkles" :href="route('admin.services.index')" :current="request()->routeIs('admin.services.*')" wire:navigate>
+                            {{ __('Services') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.settings.edit')" :current="request()->routeIs('admin.settings.*')" wire:navigate>
                             {{ __('Salon settings') }}
                         </flux:sidebar.item>
