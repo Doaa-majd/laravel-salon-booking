@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-10_
+_Last updated: 2026-07-11_
 
 ---
 
@@ -16,7 +16,7 @@ _Last updated: 2026-07-10_
 |----:|-------|---------|--------|-------|
 | 1 | Foundation: schema, models, seeders, RTL shell | M0, X | **Done** | 58 tests green; DB moved to MySQL; `RefreshDatabase` enabled |
 | 2 | Admin shell, role-based auth, Settings | X, M1 | **Done** | 70 tests green; `/admin` gated + role redirect; Settings + working-hours editor |
-| 3 | Service Catalog | M2 | Not Started | — |
+| 3 | Service Catalog | M2 | **Done** | 94 tests green; categories + services CRUD, reorder, active filter |
 | 4 | Staff profiles + service linking | M3 | Not Started | — |
 | 5 | Staff schedules & time-off | M3 | Not Started | — |
 | 6 | Availability Engine (the heart) | M4 | Not Started | — |
@@ -26,7 +26,7 @@ _Last updated: 2026-07-10_
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 2 / 11 days complete.
+**Progress:** 3 / 11 days complete.
 
 ---
 
@@ -70,8 +70,20 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 70/70 (194 assertions)** (12 new: 10 settings/accessor + 2 role-redirect). Existing auth suite unchanged.
   - **Note:** logo uploads store on the `public` disk — run `php artisan storage:link` once for uploaded logos to be web-visible (see [KI-7](known-issues.md)).
 
-### Day 3 — Service Catalog `Not Started`
-- **Session log:** _(none yet)_
+### Day 3 — Service Catalog `Done`
+- **Goal:** Admin fully manages service categories and services (name, duration, price, color, active, ordering) — the first input source for availability/booking.
+- **Deliverables:** admin creates/edits/reorders categories and services; only active services will later surface in booking.
+- **Checklist:**
+  - [x] `service-categories` CRUD (Livewire) with active toggle
+  - [x] Category reordering persisting `sort_order` (server-driven move up/down — see [ADR-0009](decisions.md))
+  - [x] `services` CRUD (Livewire): category, name, duration, price, description, color, is_active
+  - [x] Validation classes (`ServiceValidationRules`, `ServiceCategoryValidationRules`): duration ≥ 1, price ≥ 0, hex color
+  - [x] Services list grouped by category with active/inactive filter
+  - [x] Soft-delete handling (services soft-deleted; category delete leaves services with null category)
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-11` — Implemented M2 (Service Catalog). New Livewire pages `App\Livewire\Admin\ServiceCategories` and `App\Livewire\Admin\Services` (thin — orchestrate actions only), backed by Actions `SaveServiceCategory`, `SaveService`, `ReorderServiceCategories`, and validation traits `ServiceCategoryValidationRules` / `ServiceValidationRules`. Added `scopeActive`/`scopeOrdered` to `ServiceCategory`. Routes `admin.service-categories.index` + `admin.services.index`; sidebar Administration group gains Categories + Services items. Forms use Flux modals; category order via server-driven move up/down (no Alpine, per ADR-0009).
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 94/94 (251 assertions)** (24 new: 12 categories + 12 services). Existing auth/settings suites unchanged.
 
 ### Day 4 — Staff profiles + service linking `Not Started`
 - **Session log:** _(none yet)_

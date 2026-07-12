@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0009 | Server-driven category reordering (no Alpine) | Accepted | 2026-07-11 |
 | ADR-0008 | Role-based admin gating and post-login redirect | Accepted | 2026-07-10 |
 | ADR-0007 | App-layer conflict detection with locked transaction | Accepted | 2026-07-09 |
 | ADR-0006 | Money stored as immutable price/duration snapshots | Accepted | 2026-07-09 |
@@ -21,6 +22,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0009 — Server-driven category reordering (no Alpine)
+**Status:** Accepted · **Date:** 2026-07-11
+**Context:** The roadmap (Day 3) calls for reordering service categories by persisting `sort_order`, ideally via drag-and-drop. Project rules forbid adding jQuery/Alpine unless required and prefer server-driven Livewire UX.
+**Decision:** Implement reordering with explicit move up/down controls handled entirely on the server. The Livewire component computes the new ordering and delegates persistence to a `ReorderServiceCategories` action that assigns contiguous `sort_order` values (0, 1, 2, …) inside a transaction. No client-side drag library is introduced.
+**Consequences:** Reordering is fully testable without JS and cannot desync with the backend. The action is reusable, so a drag-and-drop layer can be added later (emitting an ordered ID list) without changing the persistence logic. UX is click-based rather than drag-based for now.
 
 ## ADR-0008 — Role-based admin gating and post-login redirect
 **Status:** Accepted · **Date:** 2026-07-10
