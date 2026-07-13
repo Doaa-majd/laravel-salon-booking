@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-13 (Day 8)_
+_Last updated: 2026-07-13 (Day 9)_
 
 ---
 
@@ -22,11 +22,11 @@ _Last updated: 2026-07-13 (Day 8)_
 | 6 | Availability Engine (the heart) | M4 | **Done** | 144 tests green; `AvailabilityService` + `/api/available-slots`; exhaustive boundary suite |
 | 7 | Clients + before/after photos | M5 | **Done** | 176 tests green; clients CRUD + search, profile aggregates, before/after gallery, shared phone rule |
 | 8 | Appointments core (booking action) | M6 | **Done** | 207 tests green; `BookAppointment` (lock + re-check + snapshots), status transitions, admin appointments CRUD/filters, `AppointmentPolicy` |
-| 9 | Public booking wizard + self-service | M7 | Not Started | — |
+| 9 | Public booking wizard + self-service | M7 | **Done** | 223 tests green; `/book` wizard, confirmation + `.ics`, WhatsApp link, `/my-booking` self-cancel |
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 8 / 11 days complete.
+**Progress:** 9 / 11 days complete.
 
 ---
 
@@ -163,8 +163,21 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 207/207 (505 assertions)** (31 new: `BookAppointment` writes/rejections/any-staff/inline-client/snapshot-integrity/empty-guard; status action + enum rules; `AppointmentPolicy` ownership; component authz/manual-booking/taken-slot-error/status-change/notes/soft-delete/filters). `migrate:fresh --seed` clean. Existing suites unchanged.
   - **Note:** the availability lead-time buffer applies uniformly, so booking a manual appointment *inside* the buffer window is currently rejected (accepted limitation — a future admin override could bypass it for `manual` sources; see [ADR-0014](decisions.md)). `/admin/appointments` stays admin-gated; the `AppointmentPolicy` ownership rule is ready for Day 10's staff-facing calendar. Booking changes are logged via the `Log` facade (no dedicated audit table in the schema).
 
-### Day 9 — Public booking wizard `Not Started`
-- **Session log:** _(none yet)_
+### Day 9 — Public booking wizard `Done`
+- **Goal:** A guest can book online end-to-end on mobile, land on a confirmation with an `.ics` link, and later look up / cancel their booking by phone.
+- **Deliverables:** public online booking works start to finish; confirmation + `.ics`; clients self-cancel within policy.
+- **Checklist:**
+  - [x] `/book` multi-step Livewire wizard: (1) services grouped by category, (2) staff or "any" (filtered to those providing all selected services), (3) date → live slots, (4) name + phone, (5) confirm
+  - [x] Submit calls `BookAppointment` (source=online, status=pending) with the transactional locked re-check; slot-filled-between-selection-and-submit returns the guest to the time step
+  - [x] `/book/confirmed/{appointment}` summary + salon WhatsApp `wa.me` link + `.ics` calendar download
+  - [x] `.ics` generation (`BuildAppointmentIcs` + `BookingIcsController`): salon-local wall clock emitted as absolute UTC instants, escaped text, CRLF
+  - [x] `/my-booking` phone lookup → upcoming active appointments → self-cancel within the lead-time window (default 2 h)
+  - [x] Mobile-first RTL public layout; phone validation/dedupe reuses `App\Rules\PhoneNumber`
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-13` — Implemented M7 (Public Booking). New public root layout `layouts.public` (mobile-first, RTL, salon-branded header) and three guest Livewire components under `App\Livewire\Public\`: `BookingWizard` (5-step wizard at `/book`; orchestrates `AvailabilityService` for live slots and `BookAppointment` for the write — source=online/status=pending; drops a now-unqualified staff when services change; catches `SlotUnavailableException` and returns to the time step), `BookingConfirmation` (`/book/confirmed/{appointment}` — summary + `wa.me` deep link + `.ics` link), and `MyBooking` (`/my-booking` — phone-scoped lookup + lead-time-gated self-cancel via `ChangeAppointmentStatus`). New `App\Actions\Appointments\BuildAppointmentIcs` (RFC 5545 `VEVENT`, salon-local→UTC instants per [ADR-0012](decisions.md), escaped text, CRLF) served by `App\Http\Controllers\BookingIcsController` (`text/calendar`) at `/book/{appointment}/calendar.ics`. Routes registered in `routes/web.php` (public, outside `auth`). Guest dedupe reuses the shared `PhoneNumber` rule/normalization ([ADR-0013](decisions.md)); the public read/`.ics` pages are capability-by-id and self-service is phone-scoped (see [ADR-0015](decisions.md)).
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 223/223 (557 assertions)** (16 new: guest access to `/book` + `/my-booking`; wizard happy path incl. online/pending write, service link, client find-or-create, redirect; staff-step qualification filter; any-staff resolution on submit; drop-unqualified-staff; slot-filled re-check rejection with no double-book; invalid-phone step guard; confirmation renders publicly; `.ics` endpoint + builder UTC `DTSTART`/`DTEND` + escaped `LOCATION` + CRLF; my-booking upcoming-only listing; cancel outside/inside window + cross-client rejection). Existing suites unchanged.
+  - **Note:** the `.ics`/confirmation pages authorize by appointment id (capability), and self-service authorizes by looked-up phone only — acceptable for this single-tenant, non-billing scope; a future OTP step could harden self-service (see [ADR-0015](decisions.md)). The cancellation lead time is a component constant (`MyBooking::CANCELLATION_LEAD_MINUTES`, default 120), a candidate for a salon setting later.
 
 ### Day 10 — Dashboard, calendar, reminders `Not Started`
 - **Session log:** _(none yet)_
