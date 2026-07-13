@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-12 (Day 6)_
+_Last updated: 2026-07-13 (Day 7)_
 
 ---
 
@@ -20,13 +20,13 @@ _Last updated: 2026-07-12 (Day 6)_
 | 4 | Staff profiles + service linking | M3 | **Done** | 108 tests green; staff CRUD + service linking; `providesAllServices` scope for availability |
 | 5 | Staff schedules & time-off | M3 | **Done** | 124 tests green; weekly schedule editor + time-off; all availability inputs now exist |
 | 6 | Availability Engine (the heart) | M4 | **Done** | 144 tests green; `AvailabilityService` + `/api/available-slots`; exhaustive boundary suite |
-| 7 | Clients + before/after photos | M5 | Not Started | — |
+| 7 | Clients + before/after photos | M5 | **Done** | 176 tests green; clients CRUD + search, profile aggregates, before/after gallery, shared phone rule |
 | 8 | Appointments core (booking action) | M6 | Not Started | — |
 | 9 | Public booking wizard + self-service | M7 | Not Started | — |
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 6 / 11 days complete.
+**Progress:** 7 / 11 days complete.
 
 ---
 
@@ -132,8 +132,20 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 144/144 (379 assertions)** (20 new: overlap helper, closed weekday, day-off, full/partial time-off, appointment overlap + adjacency, cancelled ignored, multi-service duration + over-window, any-staff resolution + busy fallback, buffer, window/step edges, unqualified/inactive staff, empty services, and 4 endpoint tests). Existing suites unchanged.
   - **Note:** the engine is read-only — no booking writes yet. Day 8's `BookAppointment` will re-run this check inside a locked transaction and must write appointment datetimes as salon-local wall clock to stay consistent with ADR-0012.
 
-### Day 7 — Clients + photos `Not Started`
-- **Session log:** _(none yet)_
+### Day 7 — Clients + photos `Done`
+- **Goal:** Admin manages client records, cosmetic profile fields, and the before/after photo gallery; a phone rule is extracted for reuse by the public wizard.
+- **Deliverables:** admin creates/edits clients, manages tags, and uploads categorized photos; profile aggregates (total spend, visits, last visit) render.
+- **Checklist:**
+  - [x] `clients` CRUD (Livewire) keyed on unique `phone`; list with search (name/phone), visit count, last visit
+  - [x] Client profile page: cosmetic fields (skin_type, hair_type, notes, tags), appointment history, total spend (Σ price_snapshot of completed)
+  - [x] `client_photos`: upload, classify before/after, optional link to a same-client appointment, note, taken_at; gallery view + remove
+  - [x] Phone normalization/validation (+966/+971) extracted to `App\Rules\PhoneNumber` (reused on Day 9); unique phone counts soft-deleted rows (reuse-on-restore, ADR-0005)
+  - [x] Seeder extended with a completed appointment + service snapshots + before/after photo pair
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-13` — Implemented M5 (Clients). New Livewire pages `App\Livewire\Admin\Clients` (list + search + CRUD modal) at `admin.clients.index` and `App\Livewire\Admin\ClientProfile` (cosmetic profile, appointment history, aggregates, before/after gallery + photo upload) at `admin.clients.show` (`/admin/clients/{client}`), reached via a **Clients** sidebar item and a **Profile** row link. Business logic in Actions `SaveClient` (tags parsed from a comma-separated field to a unique array) and `AddClientPhoto`; validation in a reusable trait `ClientValidationRules`. Extracted `App\Rules\PhoneNumber` — a `ValidationRule` enforcing canonical `+966`/`+971` form plus a static `normalize()` (strips separators, `00`→`+`); the component normalizes before the unique check so spacing variants can't create duplicates (see [ADR-0013](decisions.md)). `Client::scopeSearch()` (name/phone); the list decorates each row with `appointments_count` and a `last_visit_at` correlated subquery. Total spend sums `price_snapshot` of completed appointments only. Photos store on the `public` disk under `client-photos/`; the appointment-link select and its validation are scoped to the client's own appointments; `client_photos.appointment_id` is `set null` on appointment delete. `DemoSeeder` now seeds a completed appointment (with `appointment_services` snapshots) and a before/after photo pair so the profile aggregates render.
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 176/176 (437 assertions)** (32 new: client authz/CRUD, unique phone, phone-format + normalization, search, visit-count decorator; profile authz, photo upload+classify, same-client appointment link + cross-client rejection, `set null` on appointment delete, photo remove, completed-only total spend; plus the `PhoneNumber` rule suite). `migrate:fresh --seed` clean. Existing suites unchanged.
+  - **Note:** client photos share the `storage:link` requirement as logos/staff photos ([KI-7](known-issues.md)). Appointment history renders read-only until Day 8 populates real bookings; the shared `PhoneNumber` rule is the dedupe contract for the Day 9 wizard.
 
 ### Day 8 — Appointments core `Not Started`
 - **Session log:** _(none yet)_

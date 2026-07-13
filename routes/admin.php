@@ -1,5 +1,7 @@
 <?php
 
+use App\Livewire\Admin\ClientProfile;
+use App\Livewire\Admin\Clients;
 use App\Livewire\Admin\ServiceCategories;
 use App\Livewire\Admin\Services;
 use App\Livewire\Admin\Settings;
@@ -19,4 +21,7 @@ Route::middleware(['auth', 'admin'])
         Route::livewire('services', Services::class)->name('services.index');
         Route::livewire('staff', Staff::class)->name('staff.index');
         Route::livewire('staff/{staff}/schedule', StaffSchedule::class)->name('staff.schedule');
+
+        Route::livewire('clients', Clients::class)->name('clients.index');
+        Route::livewire('clients/{client}', ClientProfile::class)->name('clients.show');
     });

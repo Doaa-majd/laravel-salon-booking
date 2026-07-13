@@ -2,9 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Enums\AppointmentSource;
+use App\Enums\AppointmentStatus;
+use App\Enums\ClientPhotoType;
 use App\Enums\Currency;
 use App\Enums\UserRole;
+use App\Models\Appointment;
 use App\Models\Client;
+use App\Models\ClientPhoto;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
@@ -13,6 +18,7 @@ use App\Models\StaffSchedule;
 use App\Models\StaffTimeOff;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 
 class DemoSeeder extends Seeder
@@ -131,11 +137,54 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * Seed a handful of demo clients.
+     * Seed a handful of demo clients, one with a completed appointment and a
+     * before/after photo pair so the client profile aggregates render.
      */
     protected function seedClients(): void
     {
-        Client::factory()->count(5)->create();
+        Client::factory()->count(4)->create();
+
+        $client = Client::factory()->create(['name' => 'نورة', 'tags' => ['VIP']]);
+        $staff = Staff::query()->firstOrFail();
+
+        /** @var array<int, Service> $services */
+        $services = Service::query()->take(2)->get()->all();
+        $duration = array_sum(array_map(fn (Service $service): int => $service->duration_minutes, $services));
+        $total = array_sum(array_map(fn (Service $service): float => (float) $service->price, $services));
+
+        $start = Carbon::now('Asia/Riyadh')->subWeek()->setTime(11, 0);
+
+        $appointment = Appointment::factory()->create([
+            'client_id' => $client->id,
+            'staff_id' => $staff->id,
+            'datetime_start' => $start,
+            'datetime_end' => $start->copy()->addMinutes($duration),
+            'status' => AppointmentStatus::Completed,
+            'source' => AppointmentSource::Manual,
+            'price_snapshot' => $total,
+        ]);
+
+        foreach ($services as $service) {
+            $appointment->appointmentServices()->create([
+                'service_id' => $service->id,
+                'price' => $service->price,
+                'duration_minutes' => $service->duration_minutes,
+            ]);
+        }
+
+        ClientPhoto::factory()->create([
+            'client_id' => $client->id,
+            'appointment_id' => $appointment->id,
+            'type' => ClientPhotoType::Before,
+            'taken_at' => $start,
+        ]);
+
+        ClientPhoto::factory()->create([
+            'client_id' => $client->id,
+            'appointment_id' => $appointment->id,
+            'type' => ClientPhotoType::After,
+            'taken_at' => $start->copy()->addMinutes($duration),
+        ]);
     }
 
     /**
