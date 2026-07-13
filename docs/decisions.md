@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0013 | Shared phone normalization + validation rule | Accepted | 2026-07-13 |
 | ADR-0012 | Availability engine reasons in salon-local wall clock | Accepted | 2026-07-12 |
 | ADR-0011 | Schedules are salon-local wall-clock; time-off null times = full day | Accepted | 2026-07-12 |
 | ADR-0010 | "Provides all services" via per-service `whereHas` | Accepted | 2026-07-12 |
@@ -25,6 +26,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0013 — Shared phone normalization + validation rule
+**Status:** Accepted · **Date:** 2026-07-13
+**Context:** Clients are keyed on a unique `phone` (the primary identifier). Day 7's admin client form and Day 9's public booking wizard both create/link clients by phone. The roadmap flags that diverging phone validation between the two flows would produce mismatched or duplicate client records, and that spacing/format variants of the same number must not defeat the unique constraint.
+**Decision:** Extract a single `App\Rules\PhoneNumber` (`ValidationRule`) enforcing the canonical international form `+(966|971)\d{8,9}`, with a static `PhoneNumber::normalize()` that strips spaces/dashes/parentheses and converts a leading `00` to `+`. Callers **normalize before validating and before the unique check** (the client component sets `$this->phone = PhoneNumber::normalize(...)` prior to `validate()`), so the value that hits `Rule::unique('clients','phone')` is already canonical. The unique rule intentionally counts soft-deleted rows, keeping the reuse-on-restore policy (ADR-0005). Day 9 must reuse this exact rule + normalization for guest dedupe.
+**Consequences:** One source of truth for phone shape across admin and public flows; spacing variants collapse to the same stored value, so the unique constraint holds. Only Saudi/Emirati numbers are accepted, matching the single-tenant KSA/UAE scope (ADR-0002); supporting other countries later means widening the one rule. Normalization is deliberately minimal (no libphonenumber dependency) — it canonicalizes separators and the `00`/`+` prefix but does not reformat national-format input, which is surfaced to the user as a validation error instead.
 
 ## ADR-0012 — Availability engine reasons in salon-local wall clock
 **Status:** Accepted · **Date:** 2026-07-12

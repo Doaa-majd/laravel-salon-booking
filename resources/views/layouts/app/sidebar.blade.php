@@ -28,6 +28,9 @@
                         <flux:sidebar.item icon="users" :href="route('admin.staff.index')" :current="request()->routeIs('admin.staff.*')" wire:navigate>
                             {{ __('Staff') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="user-group" :href="route('admin.clients.index')" :current="request()->routeIs('admin.clients.*')" wire:navigate>
+                            {{ __('Clients') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.settings.edit')" :current="request()->routeIs('admin.settings.*')" wire:navigate>
                             {{ __('Salon settings') }}
                         </flux:sidebar.item>

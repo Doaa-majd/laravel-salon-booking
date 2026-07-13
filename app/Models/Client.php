@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\ClientFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -61,5 +62,24 @@ class Client extends Model
     public function photos(): HasMany
     {
         return $this->hasMany(ClientPhoto::class);
+    }
+
+    /**
+     * Scope a client search by name or phone (case-insensitive contains).
+     *
+     * @param  Builder<Client>  $query
+     */
+    public function scopeSearch(Builder $query, ?string $term): void
+    {
+        $term = trim((string) $term);
+
+        if ($term === '') {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($term): void {
+            $query->where('name', 'like', "%{$term}%")
+                ->orWhere('phone', 'like', "%{$term}%");
+        });
     }
 }
