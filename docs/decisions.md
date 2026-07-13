@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0015 | Public booking flow: capability-by-id pages + lead-time cancellation | Accepted | 2026-07-13 |
 | ADR-0014 | Booking safety via staff-row lock + availability re-check | Accepted | 2026-07-13 |
 | ADR-0013 | Shared phone normalization + validation rule | Accepted | 2026-07-13 |
 | ADR-0012 | Availability engine reasons in salon-local wall clock | Accepted | 2026-07-12 |
@@ -27,6 +28,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0015 — Public booking flow: capability-by-id pages + lead-time cancellation
+**Status:** Accepted · **Date:** 2026-07-13
+**Context:** Day 9 exposes the first unauthenticated write path (guests booking online) and two guest-facing read/cancel pages. Guests have no account, so the flow must identify and dedupe them without login, keep multi-step wizard state honest against a live availability engine, and let them cancel without an authorization identity — all while never trusting frontend availability (Booking Rules) and never hard-deleting appointments (ADR-0005).
+**Decision:** The public flow reuses existing domain machinery rather than adding parallel logic. The `/book` wizard is UI-only (ADR-0004): it orchestrates the Day 6 `AvailabilityService` for slot display and the Day 8 `BookAppointment` for the write (`source=online`, `status=pending`), so the authoritative locked re-check (ADR-0014) is the single guard against double-booking — a slot that filled between selection and submit throws `SlotUnavailableException` and returns the guest to the time step. Guests are found-or-created by the shared normalized `PhoneNumber` (ADR-0013), so a returning guest links to their existing client record. The confirmation page (`/book/confirmed/{id}`) and the `.ics` download (`/book/{id}/calendar.ics`) are **capability-by-id**: unauthenticated, with the appointment id serving as the (unguessable-enough for this single-tenant, non-sensitive context) capability — matching how a confirmation link is shared. `/my-booking` identifies the caller purely by a looked-up normalized phone, scoping every listed and cancellable appointment to that phone's client; cancellation is allowed only for still-active (pending/confirmed) appointments at least `CANCELLATION_LEAD_MINUTES` (default 120) before start, and runs through `ChangeAppointmentStatus` (status → cancelled, never a delete). The `.ics` emits salon-local wall-clock datetimes (ADR-0012) as absolute UTC instants to stay timezone-correct in any calendar app.
+**Consequences:** One definition of availability and one booking writer serve the admin manual flow and the public wizard, so conflict-safety and snapshot discipline hold identically for guests. Capability-by-id pages need no auth but expose an appointment's summary/`.ics` to anyone with the id — acceptable for a booking confirmation and consistent with sharing the link, but not a place for sensitive data. Phone-only self-service means anyone who knows a phone number can view/cancel that number's upcoming bookings; acceptable for this single-tenant salon (ADR-0002), but a future hardening could add an OTP/verification step. The cancellation window is a fixed component constant for now; making it a salon setting is deferred.
 
 ## ADR-0014 — Booking safety via staff-row lock + availability re-check
 **Status:** Accepted · **Date:** 2026-07-13
