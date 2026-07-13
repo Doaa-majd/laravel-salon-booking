@@ -185,6 +185,42 @@ class DemoSeeder extends Seeder
             'type' => ClientPhotoType::After,
             'taken_at' => $start->copy()->addMinutes($duration),
         ]);
+
+        $this->seedUpcomingAppointments($staff, $services, $duration, $total);
+    }
+
+    /**
+     * Seed a couple of upcoming appointments (with service snapshots) so the
+     * admin appointments list and dashboard have live data to render.
+     *
+     * @param  array<int, Service>  $services
+     */
+    protected function seedUpcomingAppointments(Staff $staff, array $services, int $duration, float $total): void
+    {
+        $slots = [
+            [Carbon::now('Asia/Riyadh')->addDay()->setTime(11, 0), AppointmentStatus::Confirmed],
+            [Carbon::now('Asia/Riyadh')->addDays(2)->setTime(14, 0), AppointmentStatus::Pending],
+        ];
+
+        foreach ($slots as [$start, $status]) {
+            $appointment = Appointment::factory()->create([
+                'client_id' => Client::factory()->create()->id,
+                'staff_id' => $staff->id,
+                'datetime_start' => $start,
+                'datetime_end' => $start->copy()->addMinutes($duration),
+                'status' => $status,
+                'source' => AppointmentSource::Manual,
+                'price_snapshot' => $total,
+            ]);
+
+            foreach ($services as $service) {
+                $appointment->appointmentServices()->create([
+                    'service_id' => $service->id,
+                    'price' => $service->price,
+                    'duration_minutes' => $service->duration_minutes,
+                ]);
+            }
+        }
     }
 
     /**
