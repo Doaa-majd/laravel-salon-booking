@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Admin\Appointments;
 use App\Livewire\Admin\ClientProfile;
 use App\Livewire\Admin\Clients;
 use App\Livewire\Admin\ServiceCategories;
@@ -24,4 +25,6 @@ Route::middleware(['auth', 'admin'])
 
         Route::livewire('clients', Clients::class)->name('clients.index');
         Route::livewire('clients/{client}', ClientProfile::class)->name('clients.show');
+
+        Route::livewire('appointments', Appointments::class)->name('appointments.index');
     });

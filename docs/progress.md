@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-13 (Day 7)_
+_Last updated: 2026-07-13 (Day 8)_
 
 ---
 
@@ -21,12 +21,12 @@ _Last updated: 2026-07-13 (Day 7)_
 | 5 | Staff schedules & time-off | M3 | **Done** | 124 tests green; weekly schedule editor + time-off; all availability inputs now exist |
 | 6 | Availability Engine (the heart) | M4 | **Done** | 144 tests green; `AvailabilityService` + `/api/available-slots`; exhaustive boundary suite |
 | 7 | Clients + before/after photos | M5 | **Done** | 176 tests green; clients CRUD + search, profile aggregates, before/after gallery, shared phone rule |
-| 8 | Appointments core (booking action) | M6 | Not Started | — |
+| 8 | Appointments core (booking action) | M6 | **Done** | 207 tests green; `BookAppointment` (lock + re-check + snapshots), status transitions, admin appointments CRUD/filters, `AppointmentPolicy` |
 | 9 | Public booking wizard + self-service | M7 | Not Started | — |
 | 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 7 / 11 days complete.
+**Progress:** 8 / 11 days complete.
 
 ---
 
@@ -147,8 +147,21 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 176/176 (437 assertions)** (32 new: client authz/CRUD, unique phone, phone-format + normalization, search, visit-count decorator; profile authz, photo upload+classify, same-client appointment link + cross-client rejection, `set null` on appointment delete, photo remove, completed-only total spend; plus the `PhoneNumber` rule suite). `migrate:fresh --seed` clean. Existing suites unchanged.
   - **Note:** client photos share the `storage:link` requirement as logos/staff photos ([KI-7](known-issues.md)). Appointment history renders read-only until Day 8 populates real bookings; the shared `PhoneNumber` rule is the dedupe contract for the Day 9 wizard.
 
-### Day 8 — Appointments core `Not Started`
-- **Session log:** _(none yet)_
+### Day 8 — Appointments core `Done`
+- **Goal:** Appointments are created safely (transaction + lock, re-checked availability, immutable price/duration snapshots) and managed by admin (manual creation, filtering, status transitions); conflicts are impossible under concurrency.
+- **Deliverables:** admin books manual appointments with conflict protection; status changes and filters work; every appointment carries immutable price/duration snapshots.
+- **Checklist:**
+  - [x] `BookAppointment` action: transaction + staff-row `lockForUpdate` + authoritative availability re-check → writes `appointment` + `appointment_services` price/duration snapshots; `datetime_end` = start + ΣD; links/creates client; resolves "any staff"
+  - [x] `ChangeAppointmentStatus` action with allowed-transition rules (on the `AppointmentStatus` enum) + logging; cancellation is a status change, never a delete
+  - [x] `/admin/appointments` Livewire page: filters (status, date range, staff, client phone) + row actions (status change, notes edit, soft-delete)
+  - [x] Manual creation flow (source=`manual`) reusing `BookAppointment` with live availability slots
+  - [x] `AppointmentPolicy`: admin sees all; staff sees only their own (reused by the Day 10 staff calendar)
+  - [x] Snapshots stay fixed after later service price/duration edits
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-13` — Implemented M6 (Appointments core). New Actions `App\Actions\Appointments\BookAppointment` (the single authoritative writer — `DB::transaction` → `Staff::lockForUpdate()` as the first read so the transaction's InnoDB read view forms *after* the lock, then re-runs `AvailabilityService::availableSlots()` and rejects with `SlotUnavailableException` unless the requested `H:i` is still offered; writes price/duration snapshots, computes `datetime_end`, resolves null "any" staff to the earliest free, finds-or-creates client by normalized phone) and `ChangeAppointmentStatus` (enum-driven transitions + logging). New `App\Exceptions\{SlotUnavailableException,InvalidStatusTransitionException}`, `App\Policies\AppointmentPolicy` (auto-discovered), `App\Concerns\AppointmentValidationRules`, and Livewire `App\Livewire\Admin\Appointments` + view at `admin.appointments.index` (filters, manual booking modal with live slots, per-row allowed-status dropdown, notes editor, soft-delete). `AppointmentStatus` gains `allowedTransitions`/`canTransitionTo`/`isTerminal`/`label`/`color`. Sidebar gains an **Appointments** link; `DemoSeeder` seeds two upcoming appointments with snapshots. See [ADR-0014](decisions.md) for the lock + re-check design.
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 207/207 (505 assertions)** (31 new: `BookAppointment` writes/rejections/any-staff/inline-client/snapshot-integrity/empty-guard; status action + enum rules; `AppointmentPolicy` ownership; component authz/manual-booking/taken-slot-error/status-change/notes/soft-delete/filters). `migrate:fresh --seed` clean. Existing suites unchanged.
+  - **Note:** the availability lead-time buffer applies uniformly, so booking a manual appointment *inside* the buffer window is currently rejected (accepted limitation — a future admin override could bypass it for `manual` sources; see [ADR-0014](decisions.md)). `/admin/appointments` stays admin-gated; the `AppointmentPolicy` ownership rule is ready for Day 10's staff-facing calendar. Booking changes are logged via the `Log` facade (no dedicated audit table in the schema).
 
 ### Day 9 — Public booking wizard `Not Started`
 - **Session log:** _(none yet)_

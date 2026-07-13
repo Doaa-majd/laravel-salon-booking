@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0014 | Booking safety via staff-row lock + availability re-check | Accepted | 2026-07-13 |
 | ADR-0013 | Shared phone normalization + validation rule | Accepted | 2026-07-13 |
 | ADR-0012 | Availability engine reasons in salon-local wall clock | Accepted | 2026-07-12 |
 | ADR-0011 | Schedules are salon-local wall-clock; time-off null times = full day | Accepted | 2026-07-12 |
@@ -26,6 +27,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0014 — Booking safety via staff-row lock + availability re-check
+**Status:** Accepted · **Date:** 2026-07-13
+**Context:** ADR-0007 established that appointment conflicts are detected in application code (durations are variable, so no DB constraint can enforce non-overlap) and confirmed inside a locked transaction. Day 8 implements the actual writer, `BookAppointment`, which must be immune to concurrent double-booking of the same staff/slot while reusing the Day 6 `AvailabilityService` (whose reads are non-locking) as the source of truth for what "available" means.
+**Decision:** `BookAppointment` runs inside a `DB::transaction`. Its **first** database read is `Staff::whereKey($id)->lockForUpdate()` — an exclusive row lock that serializes all concurrent bookings for that staff member. Because that locking read precedes any consistent (non-locking) read, the InnoDB read view for the transaction is established *after* the lock is acquired, so the subsequent `AvailabilityService` reads see the latest committed appointments (including one a competing transaction just committed before releasing the lock). The action then re-runs `availableSlots()` for the specific staff and rejects the write with `SlotUnavailableException` unless the requested `H:i` start is still offered. Snapshots (price/duration) and `datetime_end` are computed from the live services *at write time* and then frozen (ADR-0006); datetimes are written as salon-local wall clock (ADR-0012). A null `staff_id` ("any") is resolved to the earliest-id free staff *inside* the transaction before locking that staff. Status changes go through `ChangeAppointmentStatus`, gated by the transition rules on the `AppointmentStatus` enum; cancellation is a status change, never a delete.
+**Consequences:** Two concurrent bookings for the same staff serialize on the staff row; the loser re-checks against the winner's committed appointment and is rejected — no double-booking, proven by the taken-slot/filled-slot tests via the re-check path (true multi-threaded races aren't simulated in Pest, but the mechanism they rely on is). The lock is per-staff, so bookings for different staff never contend. The availability engine's lead-time buffer applies uniformly, so booking a manual walk-in *inside* the buffer window is currently rejected — an accepted limitation for now (a future "admin override" could bypass the buffer for manual sources). Reusing `availableSlots()` for the re-check keeps one definition of availability across the read endpoint, the wizard, and the writer.
 
 ## ADR-0013 — Shared phone normalization + validation rule
 **Status:** Accepted · **Date:** 2026-07-13
