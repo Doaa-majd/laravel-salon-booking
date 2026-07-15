@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0017 | Reports over snapshots (completed-only) + soft license-domain guard | Accepted | 2026-07-15 |
 | ADR-0016 | Admin ops: server-driven reschedule, staff-scoped calendar, Livewire reminders | Accepted | 2026-07-15 |
 | ADR-0015 | Public booking flow: capability-by-id pages + lead-time cancellation | Accepted | 2026-07-13 |
 | ADR-0014 | Booking safety via staff-row lock + availability re-check | Accepted | 2026-07-13 |
@@ -29,6 +30,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0017 — Reports over snapshots (completed-only) + soft license-domain guard
+**Status:** Accepted · **Date:** 2026-07-15
+**Context:** Day 11 (M9 + hardening) adds the reporting layer — most-requested services, staff performance, commission, and no-shows — plus the analysis doc's `settings.license_domain` "protection" note. Two questions needed a firm answer. (1) **Which appointments count, and off which prices?** The roadmap flags that revenue/commission must use immutable snapshots, never live service prices (ADR-0006); it also mixes "most-requested" (which could mean *all* bookings) with performance/commission (explicitly *completed*). Using different status filters per metric within one report would be confusing and hard to reconcile. (2) **How strict is the license/domain guard?** A hard, always-on check risks bricking an un-provisioned install and breaking the test suite; but the feature must exist and be enforceable when configured.
+**Decision:** All monetary and demand aggregates are computed over **completed** appointments only, within a closed `[from, to]` range compared with `whereDate('datetime_start', …)` against the stored salon-local wall clock (consistent with ADR-0012). This gives one coherent definition — "realized business" — across top services, staff revenue, and commission; **no-shows** are a separate count of `no_show` appointments in the same range. Every figure reads **snapshots**: top-service revenue and staff revenue sum `appointment_services.price`, and commission = `staff.commission_percent × Σ` that staff's completed service prices — so a later service price edit never moves a historical report (asserted by test). The aggregation lives in a pure `App\Services\ReportingService` (ADR-0004); the Livewire `Reports` page is a thin date-range shell (defaulting to salon-local month-to-date) and normalizes an inverted range rather than returning nothing. The license guard is a **soft** middleware, `EnsureLicensedDomain` (alias `licensed`): when `settings.license_domain` is set it 403s any request whose host doesn't match (case-insensitive, port-ignored); when it's null/empty it is a **no-op**. It is applied to both `/admin/*` route groups (the admin-gated group and the auth-only calendar group).
+**Consequences:** One "completed + snapshot" rule makes revenue, commission, and the client-profile total-spend figure (Day 7) mutually consistent and audit-safe; changing a service's price or duration never rewrites history. Every non-trashed staff member appears in the performance table (zeros included) so the report is a complete roster, not just active earners. The soft license guard ships enforceable but inert by default, so un-provisioned installs and the test suite are unaffected while a configured deployment is domain-locked; it is *not* a cryptographic license — a determined operator can edit the settings row — matching the single-tenant, self-hosted scope (ADR-0002). "Most-requested" being completed-only means abandoned/pending bookings don't inflate demand; if raw booking demand is ever wanted, it's a second query, not a redefinition of this one.
 
 ## ADR-0016 — Admin ops: server-driven reschedule, staff-scoped calendar, Livewire reminders
 **Status:** Accepted · **Date:** 2026-07-15

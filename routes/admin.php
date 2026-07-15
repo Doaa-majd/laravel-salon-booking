@@ -5,6 +5,7 @@ use App\Livewire\Admin\Calendar;
 use App\Livewire\Admin\ClientProfile;
 use App\Livewire\Admin\Clients;
 use App\Livewire\Admin\Dashboard;
+use App\Livewire\Admin\Reports;
 use App\Livewire\Admin\ServiceCategories;
 use App\Livewire\Admin\Services;
 use App\Livewire\Admin\Settings;
@@ -15,14 +16,14 @@ use Illuminate\Support\Facades\Route;
 // The operational calendar is available to admins and staff-role users; it is
 // scoped per-viewer inside the component (staff see only their own appointments
 // via the AppointmentPolicy), so it sits behind `auth` only, not the admin gate.
-Route::middleware(['auth'])
+Route::middleware(['auth', 'licensed'])
     ->prefix('admin')
     ->as('admin.')
     ->group(function () {
         Route::livewire('calendar', Calendar::class)->name('calendar');
     });
 
-Route::middleware(['auth', 'admin'])
+Route::middleware(['auth', 'admin', 'licensed'])
     ->prefix('admin')
     ->as('admin.')
     ->group(function () {
@@ -39,4 +40,6 @@ Route::middleware(['auth', 'admin'])
         Route::livewire('clients/{client}', ClientProfile::class)->name('clients.show');
 
         Route::livewire('appointments', Appointments::class)->name('appointments.index');
+
+        Route::livewire('reports', Reports::class)->name('reports.index');
     });

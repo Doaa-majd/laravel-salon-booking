@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-15 (Day 10)_
+_Last updated: 2026-07-15 (Day 11)_
 
 ---
 
@@ -24,9 +24,9 @@ _Last updated: 2026-07-15 (Day 10)_
 | 8 | Appointments core (booking action) | M6 | **Done** | 207 tests green; `BookAppointment` (lock + re-check + snapshots), status transitions, admin appointments CRUD/filters, `AppointmentPolicy` |
 | 9 | Public booking wizard + self-service | M7 | **Done** | 223 tests green; `/book` wizard, confirmation + `.ics`, WhatsApp link, `/my-booking` self-cancel |
 | 10 | Dashboard, calendar, reminders | M8 | **Done** | 243 tests green; `/admin` dashboard KPIs, day/week calendar + server-driven reschedule, WhatsApp reminders + logs |
-| 11 | Reports, hardening, release polish | M9, X | Not Started | — |
+| 11 | Reports, hardening, release polish | M9, X | **Done** | 286 tests green; `/admin/reports` (snapshot-based, completed-only) + commission; soft license-domain guard; authorization sweep |
 
-**Progress:** 10 / 11 days complete.
+**Progress:** 11 / 11 days complete.
 
 ---
 
@@ -194,8 +194,20 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 243/243 (603 assertions)** (20 new: dashboard authz + today/revenue/no-show/next-up aggregates incl. cancelled-exclusion; calendar authz for admin/staff/guest, staff-only scoping, reschedule to free slot, conflict rejection + unchanged, create-from-calendar; reschedule action to free slot / into another appointment / nudge-within-own-interval / move-staff / snapshot-duration preserved; reminder action log + wa.me substitution + default-template fallback; component reminder). `migrate:fresh --seed` clean. Updated the Day 2 `/admin` redirect test to expect the dashboard. Existing suites unchanged.
   - **Note:** the calendar's "create from empty slot" is a per-column/day **+ button** (not pixel-drop) and reschedule is a slot picker, both server-driven per [ADR-0016](decisions.md) — no JS drag library. Reminders are logged but not sent server-side (no WhatsApp API in scope). Reschedule validates the new slot against live service durations while writing the snapshot duration; a booked service edited/soft-deleted afterward is an accepted edge case ([ADR-0016](decisions.md)).
 
-### Day 11 — Reports & hardening `Not Started`
-- **Session log:** _(none yet)_
+### Day 11 — Reports & hardening `Done`
+- **Goal:** Reporting is complete and the system is release-hardened: snapshot-based reports (demand, performance, commission, no-shows), a license/domain guard, a full green suite, and an authorization sweep.
+- **Deliverables:** admin reads demand/performance/commission/no-shows over a date range; a soft license-domain guard locks the admin area when configured; `composer test` green; the admin authorization matrix is verified end to end.
+- **Checklist:**
+  - [x] `/admin/reports`: most-requested services (count + snapshot revenue via `appointment_services`), staff performance (completed count + revenue), **commission per staff** (`commission_percent × Σ` completed snapshot value), no-shows; date-range filter (defaults to month-to-date)
+  - [x] All report money reads **snapshots**, never live prices — proven by a "raise price after booking" test
+  - [x] License/domain guard using `settings.license_domain` (`EnsureLicensedDomain` middleware, `licensed` alias) — 403s a mismatched host when set, no-op when empty
+  - [x] Authorization sweep: every parameterless admin route rejects guest (→ login) and staff (→ 403) and admits admin
+  - [x] End-to-end pass: `composer test` green (Pint + PHPStan L7 + Pest)
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-15` — Implemented M9 (Reports) + release hardening. New pure `App\Services\ReportingService` (top services, staff performance, commission, no-shows, totals) — all aggregates computed over **completed** appointments in a closed `[from,to]` range using immutable snapshots (`appointment_services.price`), never live service prices; commission = `commission_percent × Σ` completed service value; every non-trashed staff member appears (zeros included). Thin Livewire `App\Livewire\Admin\Reports` + view at `admin.reports.index` (date-range filter, salon-local month-to-date default, inverted-range normalization). New soft `App\Http\Middleware\EnsureLicensedDomain` (alias `licensed`, registered in `bootstrap/app.php`, applied to both `/admin/*` route groups): host-match 403 when `settings.license_domain` is set, no-op when empty. Sidebar Administration group gains a **Reports** item. See [ADR-0017](decisions.md).
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 286/286 (678 assertions)** (43 new: 9 `ReportingService` — ranking, snapshot revenue, completed/range exclusion, inclusive boundaries, commission math, zero-work staff, snapshot-survives-price-edit, no-show count, totals; 6 `Reports` component — authz admin/staff/guest, month-to-date default, range aggregates render, inverted-range normalization; 5 license guard — unset no-op, mismatched-host 403, licensed-host OK, case-insensitive, calendar protected; 3×8 authorization-matrix sweep across the 8 parameterless admin routes). `migrate:fresh --seed` clean. Existing suites unchanged.
+  - **Note:** the license guard is a *soft* lock (an operator with settings access can change the domain) — enforceable but not cryptographic, matching the single-tenant self-hosted scope ([ADR-0002](decisions.md)). "Most-requested services" is completed-only for one coherent "realized business" definition across demand/revenue/commission; raw pending demand would be a separate query. **All 11 roadmap days are now complete.**
 
 ---
 
