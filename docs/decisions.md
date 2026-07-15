@@ -11,6 +11,7 @@
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
+| ADR-0016 | Admin ops: server-driven reschedule, staff-scoped calendar, Livewire reminders | Accepted | 2026-07-15 |
 | ADR-0015 | Public booking flow: capability-by-id pages + lead-time cancellation | Accepted | 2026-07-13 |
 | ADR-0014 | Booking safety via staff-row lock + availability re-check | Accepted | 2026-07-13 |
 | ADR-0013 | Shared phone normalization + validation rule | Accepted | 2026-07-13 |
@@ -28,6 +29,12 @@
 | ADR-0001 | MySQL for development, test, and production | Accepted | 2026-07-09 |
 
 ---
+
+## ADR-0016 — Admin ops: server-driven reschedule, staff-scoped calendar, Livewire reminders
+**Status:** Accepted · **Date:** 2026-07-15
+**Context:** Day 10 (M8) builds the operational cockpit: dashboard, calendar, rescheduling, and reminders. Three tensions surface. (1) The roadmap asks for *drag-drop* rescheduling, but project rules forbid adding a JS drag library (no Alpine/jQuery unless required), and ADR-0009 already set the precedent of server-driven UX. (2) The calendar must be reachable by **staff-role** users (who see only their own appointments), whereas the rest of `/admin/*` is admin-only behind the `admin` gate. (3) The analysis doc lists `POST` routes for reminders/status, but the whole app is Livewire-first — no resource controllers were built for these operations (status changes are already a Livewire action, not the doc's `POST /status`).
+**Decision:** Reschedule is **server-driven, not drag-drop**: clicking an appointment opens a slot picker, and `RescheduleAppointment` re-runs `AvailabilityService` inside the *same* locked transaction + authoritative re-check as `BookAppointment` (ADR-0014) — the client's proposed slot is never trusted. The engine gains one optional parameter, `availableSlots(..., $excludeAppointmentId)`, so the appointment being moved is excluded from its own busy intervals (otherwise it would block its new overlapping slot); its price/duration snapshots (ADR-0006) are preserved and the new end derives from the *snapshotted* durations, not live services. The **calendar route sits behind `auth` only** (not the `admin` gate) and calls `$this->authorize('viewAny', Appointment::class)` in `mount`; the component scopes its query to the viewer's linked `staff_id` for staff-role users and shows all staff to admins (the `AppointmentPolicy` ownership rule from Day 8). The dashboard stays admin-only at `/admin`, replacing the Day 2 redirect-to-settings. **Reminders are a Livewire action** (`SendAppointmentReminder`), consistent with `ChangeAppointmentStatus`, rather than the doc's `POST` controller: it writes a `reminder_logs` row and returns a client `wa.me` deep link with `reminder_template` variables substituted, which the staff member opens to send from their own WhatsApp.
+**Consequences:** One availability definition and one locked-write guard now serve manual booking, the public wizard, *and* rescheduling — conflict-safety and snapshot discipline hold identically across all three. The `$excludeAppointmentId` parameter is the only change to the Day 6 engine and is backwards-compatible (defaults to null). Calendar authorization lives in the component via the policy, so a future dedicated staff portal can reuse it. Two accepted edge cases: the re-check validates the new slot against *live* service durations while the write uses the *snapshot* duration, so if a booked service's duration was edited after booking the validated window length can differ from the written one (rare); and a booked service that was later soft-deleted makes its appointment non-reschedulable (`providesAllServices` excludes it). Reminders are logged but not sent server-side — no WhatsApp API integration is in scope (ADR-0002); the log records that a reminder was *issued*. Drag-drop remains a future enhancement (a JS layer could emit a target time to the same `RescheduleAppointment` action without changing the domain logic), mirroring ADR-0009's stance on reordering.
 
 ## ADR-0015 — Public booking flow: capability-by-id pages + lead-time cancellation
 **Status:** Accepted · **Date:** 2026-07-13

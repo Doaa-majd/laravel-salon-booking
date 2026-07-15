@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Actions\Appointments\BookAppointment;
 use App\Actions\Appointments\ChangeAppointmentStatus;
+use App\Actions\Appointments\SendAppointmentReminder;
 use App\Concerns\AppointmentValidationRules;
 use App\Enums\AppointmentSource;
 use App\Enums\AppointmentStatus;
@@ -68,6 +69,11 @@ class Appointments extends Component
 
     public ?string $edit_notes = null;
 
+    // WhatsApp reminder.
+    public bool $showReminder = false;
+
+    public ?string $reminderUrl = null;
+
     /**
      * Open the manual booking form.
      */
@@ -131,6 +137,17 @@ class Appointments extends Component
         }
 
         Flux::toast(variant: 'success', text: __('Appointment status updated.'));
+    }
+
+    /**
+     * Build a WhatsApp reminder link for the appointment's client and log it.
+     */
+    public function sendReminder(Appointment $appointment, SendAppointmentReminder $action): void
+    {
+        $this->reminderUrl = $action->handle($appointment);
+        $this->showReminder = true;
+
+        Flux::toast(variant: 'success', text: __('Reminder logged. Open WhatsApp to send it.'));
     }
 
     /**

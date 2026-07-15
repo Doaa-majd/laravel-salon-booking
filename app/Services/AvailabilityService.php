@@ -59,11 +59,15 @@ class AvailabilityService
      * @param  array<int, int>  $serviceIds  Services to book together.
      * @param  int|null  $staffId  A specific staff member, or null for "any".
      * @param  string|Carbon  $date  The target date (salon-local).
+     * @param  int|null  $excludeAppointmentId  An appointment to ignore when
+     *                                          computing busy intervals — used
+     *                                          when rescheduling so a booking
+     *                                          never blocks its own new slot.
      * @return array<int, array{time: string, datetime: string, staff_id: int, staff_name: string}>
      *                                                                                              Slots sorted ascending by start time; one entry per
      *                                                                                              time (for "any", the earliest-id free staff is suggested).
      */
-    public function availableSlots(array $serviceIds, ?int $staffId, string|Carbon $date): array
+    public function availableSlots(array $serviceIds, ?int $staffId, string|Carbon $date, ?int $excludeAppointmentId = null): array
     {
         $serviceIds = $this->normalizeServiceIds($serviceIds);
         if ($serviceIds === []) {
@@ -90,7 +94,7 @@ class AvailabilityService
             return [];
         }
 
-        return $this->generateSlots($candidates, $day, $salonWindow, $duration, $setting->timezone);
+        return $this->generateSlots($candidates, $day, $salonWindow, $duration, $setting->timezone, $excludeAppointmentId);
     }
 
     /**
@@ -150,7 +154,7 @@ class AvailabilityService
      * @param  array{0: Carbon, 1: Carbon}  $salonWindow
      * @return array<int, array{time: string, datetime: string, staff_id: int, staff_name: string}>
      */
-    private function generateSlots(Collection $candidates, Carbon $day, array $salonWindow, int $duration, string $timezone): array
+    private function generateSlots(Collection $candidates, Carbon $day, array $salonWindow, int $duration, string $timezone, ?int $excludeAppointmentId = null): array
     {
         [$salonOpen, $salonClose] = $salonWindow;
         $weekday = $day->dayOfWeek;
@@ -166,7 +170,7 @@ class AvailabilityService
             }
             [$windowStart, $windowEnd] = $window;
 
-            $busy = $this->busyIntervals($staff, $day);
+            $busy = $this->busyIntervals($staff, $day, $excludeAppointmentId);
             if ($busy === null) {
                 // Full-day time-off — this staff is unavailable all day.
                 continue;
@@ -256,7 +260,7 @@ class AvailabilityService
      *
      * @return array<int, array{0: CarbonInterface, 1: CarbonInterface}>|null
      */
-    private function busyIntervals(Staff $staff, Carbon $day): ?array
+    private function busyIntervals(Staff $staff, Carbon $day, ?int $excludeAppointmentId = null): ?array
     {
         $busy = [];
 
@@ -278,6 +282,7 @@ class AvailabilityService
         $appointments = Appointment::query()
             ->where('staff_id', $staff->id)
             ->where('status', '!=', AppointmentStatus::Cancelled->value)
+            ->when($excludeAppointmentId !== null, fn ($query) => $query->whereKeyNot($excludeAppointmentId))
             ->whereDate('datetime_start', $day->toDateString())
             ->get(['datetime_start', 'datetime_end']);
 

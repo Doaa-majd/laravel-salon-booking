@@ -4,6 +4,7 @@ use App\Enums\AppointmentStatus;
 use App\Livewire\Admin\Appointments as AppointmentsComponent;
 use App\Models\Appointment;
 use App\Models\Client;
+use App\Models\ReminderLog;
 use App\Models\Service;
 use App\Models\Setting;
 use App\Models\Staff;
@@ -173,6 +174,27 @@ test('admin can soft-delete an appointment', function () {
 
     expect(Appointment::query()->find($appointment->id))->toBeNull();
     expect(Appointment::withTrashed()->find($appointment->id))->not->toBeNull();
+});
+
+test('admin can send a whatsapp reminder for an appointment', function () {
+    Setting::factory()->create([
+        'salon_name' => 'Glow',
+        'reminder_template' => 'Hi {client}, reminder for {salon} on {date} at {time}.',
+    ]);
+
+    $user = User::factory()->admin()->create();
+    $this->actingAs($user);
+
+    $client = Client::factory()->create(['name' => 'Noura', 'phone' => '+966512345678']);
+    $appointment = Appointment::factory()->create(['client_id' => $client->id]);
+
+    Livewire::test(AppointmentsComponent::class)
+        ->call('sendReminder', $appointment->id)
+        ->assertSet('showReminder', true)
+        ->assertSet('reminderUrl', fn ($url) => str_starts_with((string) $url, 'https://wa.me/966512345678?text='));
+
+    expect(ReminderLog::query()->where('appointment_id', $appointment->id)->count())->toBe(1);
+    expect(ReminderLog::query()->firstOrFail()->sent_by)->toBe($user->id);
 });
 
 test('appointments can be filtered by status', function () {

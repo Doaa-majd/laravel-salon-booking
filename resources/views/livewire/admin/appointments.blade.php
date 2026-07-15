@@ -93,6 +93,15 @@
                                     </flux:dropdown>
                                 @endif
 
+                                <flux:button
+                                    size="sm"
+                                    variant="ghost"
+                                    icon="chat-bubble-left-right"
+                                    wire:click="sendReminder({{ $appointment->id }})"
+                                >
+                                    {{ __('Remind') }}
+                                </flux:button>
+
                                 <flux:button size="sm" variant="ghost" icon="pencil-square" wire:click="edit({{ $appointment->id }})">
                                     {{ __('Notes') }}
                                 </flux:button>
@@ -186,6 +195,33 @@
                 <flux:button variant="primary" type="submit">{{ __('Book') }}</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    {{-- WhatsApp reminder modal --}}
+    <flux:modal wire:model.self="showReminder" class="max-w-lg">
+        <div class="space-y-6">
+            <div>
+                <flux:heading size="lg">{{ __('Send WhatsApp reminder') }}</flux:heading>
+                <flux:subheading>{{ __('A reminder has been logged. Open WhatsApp to send the pre-filled message.') }}</flux:subheading>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close>
+                    <flux:button variant="filled" type="button">{{ __('Close') }}</flux:button>
+                </flux:modal.close>
+                @if ($reminderUrl)
+                    <flux:button
+                        as="a"
+                        href="{{ $reminderUrl }}"
+                        target="_blank"
+                        variant="primary"
+                        icon="chat-bubble-left-right"
+                    >
+                        {{ __('Open WhatsApp') }}
+                    </flux:button>
+                @endif
+            </div>
+        </div>
     </flux:modal>
 
     {{-- Notes editor modal --}}

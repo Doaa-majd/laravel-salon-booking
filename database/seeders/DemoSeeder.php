@@ -6,10 +6,12 @@ use App\Enums\AppointmentSource;
 use App\Enums\AppointmentStatus;
 use App\Enums\ClientPhotoType;
 use App\Enums\Currency;
+use App\Enums\ReminderChannel;
 use App\Enums\UserRole;
 use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\ClientPhoto;
+use App\Models\ReminderLog;
 use App\Models\Service;
 use App\Models\ServiceCategory;
 use App\Models\Setting;
@@ -198,9 +200,12 @@ class DemoSeeder extends Seeder
     protected function seedUpcomingAppointments(Staff $staff, array $services, int $duration, float $total): void
     {
         $slots = [
+            [Carbon::now('Asia/Riyadh')->setTime(16, 0), AppointmentStatus::Confirmed],
             [Carbon::now('Asia/Riyadh')->addDay()->setTime(11, 0), AppointmentStatus::Confirmed],
             [Carbon::now('Asia/Riyadh')->addDays(2)->setTime(14, 0), AppointmentStatus::Pending],
         ];
+
+        $first = true;
 
         foreach ($slots as [$start, $status]) {
             $appointment = Appointment::factory()->create([
@@ -219,6 +224,16 @@ class DemoSeeder extends Seeder
                     'price' => $service->price,
                     'duration_minutes' => $service->duration_minutes,
                 ]);
+            }
+
+            // A sample WhatsApp reminder log so the reminder history isn't empty.
+            if ($first) {
+                ReminderLog::factory()->create([
+                    'appointment_id' => $appointment->id,
+                    'channel' => ReminderChannel::Whatsapp,
+                    'sent_at' => Carbon::now('Asia/Riyadh'),
+                ]);
+                $first = false;
             }
         }
     }
