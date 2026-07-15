@@ -40,6 +40,9 @@
                         <flux:sidebar.item icon="calendar-days" :href="route('admin.appointments.index')" :current="request()->routeIs('admin.appointments.*')" wire:navigate>
                             {{ __('Appointments') }}
                         </flux:sidebar.item>
+                        <flux:sidebar.item icon="chart-pie" :href="route('admin.reports.index')" :current="request()->routeIs('admin.reports.*')" wire:navigate>
+                            {{ __('Reports') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.settings.edit')" :current="request()->routeIs('admin.settings.*')" wire:navigate>
                             {{ __('Salon settings') }}
                         </flux:sidebar.item>
