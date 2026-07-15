@@ -6,7 +6,7 @@
 **Status legend:** `Not Started` · `In Progress` · `Blocked` · `Done`
 **Definition of Done (per day):** feature usable in-app · tests written & passing · `composer test` green (Pint + PHPStan L7 + Pest) · RTL renders · existing auth untouched.
 
-_Last updated: 2026-07-13 (Day 9)_
+_Last updated: 2026-07-15 (Day 10)_
 
 ---
 
@@ -23,10 +23,10 @@ _Last updated: 2026-07-13 (Day 9)_
 | 7 | Clients + before/after photos | M5 | **Done** | 176 tests green; clients CRUD + search, profile aggregates, before/after gallery, shared phone rule |
 | 8 | Appointments core (booking action) | M6 | **Done** | 207 tests green; `BookAppointment` (lock + re-check + snapshots), status transitions, admin appointments CRUD/filters, `AppointmentPolicy` |
 | 9 | Public booking wizard + self-service | M7 | **Done** | 223 tests green; `/book` wizard, confirmation + `.ics`, WhatsApp link, `/my-booking` self-cancel |
-| 10 | Dashboard, calendar, reminders | M8 | Not Started | — |
+| 10 | Dashboard, calendar, reminders | M8 | **Done** | 243 tests green; `/admin` dashboard KPIs, day/week calendar + server-driven reschedule, WhatsApp reminders + logs |
 | 11 | Reports, hardening, release polish | M9, X | Not Started | — |
 
-**Progress:** 9 / 11 days complete.
+**Progress:** 10 / 11 days complete.
 
 ---
 
@@ -179,8 +179,20 @@ Each day is checked off against its roadmap deliverables. Copy the block format 
   - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 223/223 (557 assertions)** (16 new: guest access to `/book` + `/my-booking`; wizard happy path incl. online/pending write, service link, client find-or-create, redirect; staff-step qualification filter; any-staff resolution on submit; drop-unqualified-staff; slot-filled re-check rejection with no double-book; invalid-phone step guard; confirmation renders publicly; `.ics` endpoint + builder UTC `DTSTART`/`DTEND` + escaped `LOCATION` + CRLF; my-booking upcoming-only listing; cancel outside/inside window + cross-client rejection). Existing suites unchanged.
   - **Note:** the `.ics`/confirmation pages authorize by appointment id (capability), and self-service authorizes by looked-up phone only — acceptable for this single-tenant, non-billing scope; a future OTP step could harden self-service (see [ADR-0015](decisions.md)). The cancellation lead time is a component constant (`MyBooking::CANCELLATION_LEAD_MINUTES`, default 120), a candidate for a salon setting later.
 
-### Day 10 — Dashboard, calendar, reminders `Not Started`
-- **Session log:** _(none yet)_
+### Day 10 — Dashboard, calendar, reminders `Done`
+- **Goal:** The daily operational cockpit — KPI dashboard, a day/week calendar with availability-re-checked rescheduling, and WhatsApp reminders.
+- **Deliverables:** admin runs the day from dashboard + calendar; reschedules safely; sends logged WhatsApp reminders.
+- **Checklist:**
+  - [x] `/admin` dashboard cards: today's appointment count, expected revenue (Σ `price_snapshot` non-cancelled), no-shows, next-up; today's timeline list
+  - [x] `/admin/calendar` day/week view; blocks colored by service (status badge); click to open; create from an empty slot (reuses `BookAppointment`)
+  - [x] **Reschedule** with authoritative re-check: `RescheduleAppointment` re-runs `AvailabilityService` inside a locked transaction (excludes the moved appointment's own interval), preserving price/duration snapshots — drag-drop degrades to a server-driven slot picker ([ADR-0016](decisions.md))
+  - [x] Reminders: `SendAppointmentReminder` builds a client `wa.me` link from `settings.reminder_template` variables and writes a `reminder_logs` row (row action on `/admin/appointments`)
+  - [x] Staff-role calendar shows only their own appointments (via `AppointmentPolicy`; calendar sits behind `auth`, scoped in-component)
+  - [x] Tests written & `composer test` green
+- **Session log:**
+  - `2026-07-15` — Implemented M8 (Admin Ops). New Livewire pages `App\Livewire\Admin\Dashboard` (KPI cards + today's timeline, salon-local "today", revenue/counts exclude cancelled) at `/admin` (replacing the Day 2 redirect-to-settings) and `App\Livewire\Admin\Calendar` (day/week views, service-colored blocks via a `calendar-block` partial, create-from-slot modal reusing `BookAppointment`, and a reschedule modal). New Actions `RescheduleAppointment` (locked transaction + `AvailabilityService` re-check with the new **exclude-self** parameter, preserves snapshots, optional staff move) and `SendAppointmentReminder` (logs `reminder_logs`, returns the client `wa.me` deep link with `{client}/{salon}/{date}/{time}` substituted). Extended `AvailabilityService::availableSlots()` with an optional `$excludeAppointmentId`. `Appointments` page gains a **Remind** row action + modal. Calendar route sits behind `auth` (not the `admin` gate) and authorizes `viewAny` in-component so staff-role users reach it scoped to their own `staff_id` (admins see all). Sidebar gains **Dashboard** + **Calendar** (admins) and a **My calendar** item (staff). `DemoSeeder` now seeds a today appointment + a sample reminder log. See [ADR-0016](decisions.md).
+  - **Verification:** `composer test` green → Pint pass · PHPStan L7 0 errors · **Pest 243/243 (603 assertions)** (20 new: dashboard authz + today/revenue/no-show/next-up aggregates incl. cancelled-exclusion; calendar authz for admin/staff/guest, staff-only scoping, reschedule to free slot, conflict rejection + unchanged, create-from-calendar; reschedule action to free slot / into another appointment / nudge-within-own-interval / move-staff / snapshot-duration preserved; reminder action log + wa.me substitution + default-template fallback; component reminder). `migrate:fresh --seed` clean. Updated the Day 2 `/admin` redirect test to expect the dashboard. Existing suites unchanged.
+  - **Note:** the calendar's "create from empty slot" is a per-column/day **+ button** (not pixel-drop) and reschedule is a slot picker, both server-driven per [ADR-0016](decisions.md) — no JS drag library. Reminders are logged but not sent server-side (no WhatsApp API in scope). Reschedule validates the new slot against live service durations while writing the snapshot duration; a booked service edited/soft-deleted afterward is an accepted edge case ([ADR-0016](decisions.md)).
 
 ### Day 11 — Reports & hardening `Not Started`
 - **Session log:** _(none yet)_

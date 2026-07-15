@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Admin\Dashboard;
 use App\Livewire\Admin\Settings;
 use App\Models\Setting;
 use App\Models\User;
@@ -23,10 +24,10 @@ test('guests are redirected from admin settings to login', function () {
     $this->get('/admin/settings')->assertRedirect(route('login'));
 });
 
-test('the admin index redirects to the settings page', function () {
+test('the admin index shows the dashboard', function () {
     $this->actingAs(User::factory()->admin()->create());
 
-    $this->get('/admin')->assertRedirect('/admin/settings');
+    $this->get('/admin')->assertOk()->assertSeeLivewire(Dashboard::class);
 });
 
 test('admin can update salon settings', function () {

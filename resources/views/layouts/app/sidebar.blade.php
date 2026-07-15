@@ -19,6 +19,12 @@
 
                 @if (auth()->user()?->isAdmin())
                     <flux:sidebar.group :heading="__('Administration')" class="grid">
+                        <flux:sidebar.item icon="chart-bar" :href="route('admin.dashboard')" :current="request()->routeIs('admin.dashboard')" wire:navigate>
+                            {{ __('Dashboard') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="calendar" :href="route('admin.calendar')" :current="request()->routeIs('admin.calendar')" wire:navigate>
+                            {{ __('Calendar') }}
+                        </flux:sidebar.item>
                         <flux:sidebar.item icon="rectangle-stack" :href="route('admin.service-categories.index')" :current="request()->routeIs('admin.service-categories.*')" wire:navigate>
                             {{ __('Categories') }}
                         </flux:sidebar.item>
@@ -36,6 +42,12 @@
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.settings.edit')" :current="request()->routeIs('admin.settings.*')" wire:navigate>
                             {{ __('Salon settings') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
+                @elseif (auth()->user()?->isStaff())
+                    <flux:sidebar.group :heading="__('My work')" class="grid">
+                        <flux:sidebar.item icon="calendar" :href="route('admin.calendar')" :current="request()->routeIs('admin.calendar')" wire:navigate>
+                            {{ __('My calendar') }}
                         </flux:sidebar.item>
                     </flux:sidebar.group>
                 @endif
